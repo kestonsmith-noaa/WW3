@@ -164,7 +164,7 @@ contains
         if(trim(outvars(n)%dims) == 'm')m_axis = .true.
         if(trim(outvars(n)%dims) == 'p')p_axis = .true.
         if(trim(outvars(n)%dims) == 'k')k_axis = .true.
-        if(trim(outvars(n)%dims) == 'nk')nk_axis = .true.
+        if(trim(outvars(n)%dims) == 'n')nk_axis = .true.
      end if
     end do
 
@@ -235,7 +235,7 @@ contains
       else if (trim(outvars(n)%dims) == 'k') then
         dimid4(3:4) = (/ktid, timid/)
         dimid => dimid4
-      else if (trim(outvars(n)%dims) == 'nk') then ! wavenumber
+      else if (trim(outvars(n)%dims) == 'n') then ! wavenumber
         dimid4(3:4) = (/nktid, timid/) 
         dimid => dimid4
       else
@@ -334,7 +334,7 @@ contains
         if (vname .eq.   'USSPX') call write_var3d(iodesc3dp, vname, ussp     (1:nseal_cpl,   1:usspf(2)) )
         if (vname .eq.   'USSPY') call write_var3d(iodesc3dp, vname, ussp     (1:nseal_cpl,nk+1:nk+usspf(2)) )
 
-      else if (trim(outvars(n)%dims) == 'nk') then                           ! freq + 1 axis for wavenumber
+      else if (trim(outvars(n)%dims) == 'n') then                           ! freq + 1 axis for wavenumber
         var3d => var3dnk
          if(vname .eq.       'WN') call write_var3d_transpose(iodesc3dnk, vname, wn (1:len_nk  ,1:nseal_cpl)   )
 
@@ -889,7 +889,7 @@ contains
          varatts( "STH2M", "STH2M     ", "Directional spreading from a2,b2                ", "deg       ", "k ", .false.) , &
          !TODO: has reverse indices (nk,nsea)
 !KWS         varatts( "WN   ", "WN        ", "Wavenumber array                                ", "m-1       ", "k ", .false.)   &
-         varatts( "WN   ", "WN        ", "Wavenumber array                                ", "m-1       ", "nk", .false.)   &
+         varatts( "WN   ", "WN        ", "Wavenumber array                                ", "m-1       ", "n ", .false.)   &
          ]
 
     !  4   Spectral Partition Parameters
