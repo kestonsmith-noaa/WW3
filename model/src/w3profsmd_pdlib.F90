@@ -117,7 +117,7 @@ MODULE PDLIB_W3PROFSMD
 #else
   REAL, ALLOCATABLE     :: ASPAR_JAC(:,:), ASPAR_DIAG_SOURCES(:,:), ASPAR_DIAG_ALL(:,:), B_JAC(:,:)
   REAL, ALLOCATABLE     :: U_JAC(:,:)
-#end
+#endif
   REAL, ALLOCATABLE     :: CAD_THE(:,:), CAS_SIG(:,:)
   REAL, ALLOCATABLE     :: CWNB_SIG_M2(:,:)
   REAL, ALLOCATABLE     :: COFRM4(:)
@@ -5683,8 +5683,6 @@ CONTAINS
     CALL ALL_VA_INTEGRAL_PRINT(IMOD, "VA(np) before transform", 0)
     CALL ALL_VA_INTEGRAL_PRINT(IMOD, "VA(npa) before transform", 1)
 #endif
-!KWS Switch to double precision VA for iterative solver
-!    VAdouble=DBLE(VA)
     DO JSEA=1,NSEAL
       IP      = JSEA
       IP_glob = iplg(IP)
@@ -5697,12 +5695,11 @@ CONTAINS
 #else
         CG1(IK)    = CG(IK,ISEA)
 #endif
-!        VAdouble(ISP,JSEA) = VAdouble(ISP,JSEA) / CG1(IK) * CLATS(ISEA)
         VA(ISP,JSEA) = VA(ISP,JSEA) / CG1(IK) * CLATS(ISEA)
       END DO
     END DO
-!    VAOLD = SNGL(VAdouble(1:NSPEC,1:NSEAL))
-    VAOLD = VAdouble(1:NSPEC,1:NSEAL)
+
+    VAOLD = VA(1:NSPEC,1:NSEAL)
 
 #ifdef W3_DEBUGSRC
     DO JSEA=1,NSEAL
@@ -6269,7 +6266,8 @@ CONTAINS
       nbiter = nbiter + 1
 
     END DO ! Open Do Loop ... End of Time Interval 
-    
+
+#ifdef W3_ITDP
     call cpu_time(TTime1) !KWS timing
     IF (myrank == 0) WRITE(*,*) 'nbiter, total time ',nbiter, (TTime1-TTime0)  
     IF (myrank == 0) WRITE(*,*) 'nbiter, time per iteration',nbiter, (TTime1-TTime0)/real(nbiter)  
@@ -6277,7 +6275,7 @@ CONTAINS
     DO IP = 1, npa
      VA(1:NSPEC,IP)=SNGL(VAdouble(1:NSPEC,IP))
     ENDDO
-    
+#endif    
     
 #ifdef W3_DEBUGSOLVER
     WRITE(740+IAPROC,*) 'nbIter=', nbIter, ' B_JGS_MAXITER=', B_JGS_MAXITER
