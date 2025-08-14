@@ -44,7 +44,9 @@ module yowExchangeModule
   public :: initNbrDomains, createMPITypes, setDimSize
   public :: finalizeExchangeModule, PDLIB_exchange1Dreal
   public :: PDLIB_exchange2Dreal, PDLIB_exchange2Dreal_zero
-
+#ifdef W3_ITDP
+  public :: PDLIB_exchange2Ddouble !KWS
+#endif
   !> Holds some data belong to a neighbor Domain
   type, public :: t_neighborDomain
 
@@ -88,6 +90,13 @@ module yowExchangeModule
     integer :: p2DRrecvType1 = MPI_DATATYPE_NULL
     integer :: p2DRsendType2 = MPI_DATATYPE_NULL
     integer :: p2DRrecvType2 = MPI_DATATYPE_NULL
+
+
+    !KWS create seperate double percision type for iterative solver
+#ifdef W3_ITDP
+    integer :: p2DRsendType1Double = MPI_DATATYPE_NULL
+    integer :: p2DRrecvType1Double = MPI_DATATYPE_NULL !KWS to be filled
+#endif
 
   contains
     !     procedure :: exchangeGhostIds
@@ -144,6 +153,12 @@ contains
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
     call mpi_type_free(this%p2DRrecvType2, ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
+#ifdef W3_ITDP
+    call mpi_type_free(this%p2DRsendType1Double, ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
+#endif
+
+
   end subroutine finalize
 
   ! create MPI indexed datatype for this neighborDomain
@@ -217,8 +232,96 @@ contains
     call mpi_type_commit(this%p2DRrecvType1,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
 
+#ifdef W3_ITDP
+    !KWS - Add seperate double percision 2D for iterative solver(Jacobi)
+    ! MPI datatypes for size(U) == npa  U(1:npa) double precision
+    ! p2D real second dim is n2ndDim long
+    dsplSend = (ipgl(this%nodesToSend)-1) * n2ndDim
+    dsplRecv = (ghostgl(this%nodesToReceive) + np -1) * n2ndDim
+    call mpi_type_create_indexed_block(this%numNodesToSend, n2ndDim, dsplSend, MPI_DOUBLE_PRECISION, this%p2DRsendType1Double,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+    call mpi_type_commit(this%p2DRsendType1Double,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
 
+    call mpi_type_create_indexed_block(this%numNodesToReceive, n2ndDim, dsplRecv, MPI_DOUBLE_PRECISION, this%p2DRrecvType1Double,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+    call mpi_type_commit(this%p2DRrecvType1Double,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+#endif
   end subroutine createMPIType
+
+
+#ifdef W3_ITDP
+  subroutine PDLIB_exchange2Ddouble(U)
+    use yowDatapool, only: comm, myrank
+    use yowNodepool, only: t_Node, nodes_global, np, ng, ghosts, npa
+    use yowerr
+    use MPI
+    USE W3ODATMD, only : IAPROC
+    implicit none
+    double precision, intent(inout) :: U(:,:)
+
+    integer :: i, ierr, tag
+    integer :: sendRqst(nConnDomains), recvRqst(nConnDomains)
+    integer :: recvStat(MPI_STATUS_SIZE, nConnDomains), sendStat(MPI_STATUS_SIZE, nConnDomains)
+
+
+#ifdef W3_DEBUGEXCH
+    WRITE(740+IAPROC,*) 'PDLIB_exchange2Ddouble, step 3'
+    FLUSH(740+IAPROC)
+#endif
+
+    ! post receives
+#ifdef W3_DEBUGEXCH
+    WRITE(740+IAPROC,*) 'PDLIB_exchange2Ddouble, step 4'
+    FLUSH(740+IAPROC)
+#endif
+    do i=1, nConnDomains
+      tag = 30000 + myrank
+      call MPI_IRecv(U, 1, neighborDomains(i)%p2DRrecvType1Double, &
+           neighborDomains(i)%domainID-1, tag, comm, &
+           recvRqst(i), ierr)
+      if(ierr/=MPI_SUCCESS) then
+        CALL PARALLEL_ABORT("MPI_IRecv", ierr)
+      endif
+    enddo
+#ifdef W3_DEBUGEXCH
+    WRITE(740+IAPROC,*) 'PDLIB_exchange2Ddouble, step 5'
+    FLUSH(740+IAPROC)
+#endif
+
+    ! post sends
+    do i=1, nConnDomains
+      tag = 30000 + (neighborDomains(i)%domainID-1)
+      call MPI_ISend(U, 1, neighborDomains(i)%p2DRsendType1Double, &
+           neighborDomains(i)%domainID-1, tag, comm, &
+           sendRqst(i), ierr)
+      if(ierr/=MPI_SUCCESS) then
+        CALL PARALLEL_ABORT("MPI_ISend", ierr)
+      endif
+    end do
+#ifdef W3_DEBUGEXCH
+    WRITE(740+IAPROC,*) 'PDLIB_exchange2Ddouble, step 6'
+    FLUSH(740+IAPROC)
+#endif
+
+    ! Wait for completion
+    call mpi_waitall(nConnDomains, recvRqst, recvStat,ierr)
+    if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
+#ifdef W3_DEBUGEXCH
+    WRITE(740+IAPROC,*) 'PDLIB_exchange2Ddouble, step 11'
+    FLUSH(740+IAPROC)
+#endif
+    call mpi_waitall(nConnDomains, sendRqst, sendStat,ierr)
+    if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
+#ifdef W3_DEBUGEXCH
+    WRITE(740+IAPROC,*) 'PDLIB_exchange2Ddouble, step 12'
+    FLUSH(740+IAPROC)
+#endif
+  end subroutine PDLIB_exchange2Ddouble
+#endif
+
+
 
   subroutine initNbrDomains(nConnD)
     use yowerr
@@ -388,6 +491,7 @@ contains
       deallocate(neighborDomains)
     endif
   end subroutine finalizeExchangeModule
+
   !> exchange values in U.
   !> \param[inout] U array with values to exchange. np+ng+1 long.
   !> U[0:npa] Send values from U(1:np) to other threads.
@@ -537,6 +641,8 @@ contains
     call mpi_waitall(nConnDomains, sendRqst, sendStat,ierr)
     if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
   end subroutine PDLIB_exchange2Dreal_zero
+
+
 
 
 end module yowExchangeModule
