@@ -112,7 +112,7 @@ MODULE PDLIB_W3PROFSMD
   !/
   LOGICAL               :: MAPSTA_HACK = .FALSE.
 #ifdef W3_ITDP
-  REAL*8, ALLOCATABLE     :: ASPAR_JAC(:,:), ASPAR_DIAG_SOURCES(:,:), ASPAR_DIAG_ALL(:,:), B_JAC(:,:)
+  REAL*8, ALLOCATABLE   :: ASPAR_JAC(:,:), ASPAR_DIAG_SOURCES(:,:), ASPAR_DIAG_ALL(:,:), B_JAC(:,:)
   DOUBLE PRECISION, ALLOCATABLE :: U_JAC(:,:)
 #else
   REAL, ALLOCATABLE     :: ASPAR_JAC(:,:), ASPAR_DIAG_SOURCES(:,:), ASPAR_DIAG_ALL(:,:), B_JAC(:,:)
@@ -5595,7 +5595,7 @@ CONTAINS
 #else
     REAL :: ASPAR_DIAG(NSPEC)
 #endif
-!KWS Friday August 8 next canidates for r*8 
+! next canidates for r*8 if B4B fails 
     REAL  :: aspar_diag_local(nspec), aspar_off_diag_local(nspec), b_jac_local(nspec)
 
     REAL*8 :: eDiffSing, eSumPart
@@ -5624,7 +5624,7 @@ CONTAINS
     
 #endif
 #ifdef W3_ITDP
-    DOUBLE PRECISION :: VAdouble(NSPEC,npa) !KWS
+    DOUBLE PRECISION :: VAdouble(NSPEC,npa)
     real TTime0,TTime1
 #endif
     CHARACTER(len=128) eFile
@@ -5793,10 +5793,10 @@ CONTAINS
     enddo
 #ifdef W3_ITDP
     DO IP = 1, np
-     VAdouble(1:NSPEC,IP)=DBLE(VA(1:NSPEC,IP))
+      VAdouble(1:NSPEC,IP)=DBLE(VA(1:NSPEC,IP))
     ENDDO
     CALL PDLIB_exchange2Ddouble(VAdouble)
-    call cpu_time(TTime0) !KWS timing
+    call cpu_time(TTime0) !timing
 #endif
 !
       DO
@@ -6058,7 +6058,7 @@ CONTAINS
                 ISP  = ITH + (IK-1)*NTH
                 IF (REFPARS(3) .LT. 0.5 .AND. IOBPD_LOC(ITH,IP) .EQ. 0 .AND. IOBPA_LOC(IP) .EQ. 0) THEN
 #ifdef W3_ITDP
-                  !KWS This needs to be dealt with for potential precision !! 
+                  !This may need to be dealt with for potential precision !! 
                   VAdouble(ISP,IP) = VAOLD(ISP,IP) * IOBDP_LOC(IP) ! Restores reflected action spectra ...
 #else
                   VA(ISP,IP) = VAOLD(ISP,IP) * IOBDP_LOC(IP) ! Restores reflected action spectra ...
@@ -6268,12 +6268,12 @@ CONTAINS
     END DO ! Open Do Loop ... End of Time Interval 
 
 #ifdef W3_ITDP
-    call cpu_time(TTime1) !KWS timing
+    call cpu_time(TTime1) !timing
     IF (myrank == 0) WRITE(*,*) 'nbiter, total time ',nbiter, (TTime1-TTime0)  
     IF (myrank == 0) WRITE(*,*) 'nbiter, time per iteration',nbiter, (TTime1-TTime0)/real(nbiter)  
-    !KWS plugback in single precision VA
+    !plugback in single precision VA
     DO IP = 1, npa
-     VA(1:NSPEC,IP)=SNGL(VAdouble(1:NSPEC,IP))
+      VA(1:NSPEC,IP)=SNGL(VAdouble(1:NSPEC,IP))
     ENDDO
 #endif    
     

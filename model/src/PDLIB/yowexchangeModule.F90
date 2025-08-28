@@ -45,7 +45,7 @@ module yowExchangeModule
   public :: finalizeExchangeModule, PDLIB_exchange1Dreal
   public :: PDLIB_exchange2Dreal, PDLIB_exchange2Dreal_zero
 #ifdef W3_ITDP
-  public :: PDLIB_exchange2Ddouble !KWS
+  public :: PDLIB_exchange2Ddouble
 #endif
   !> Holds some data belong to a neighbor Domain
   type, public :: t_neighborDomain
@@ -92,10 +92,10 @@ module yowExchangeModule
     integer :: p2DRrecvType2 = MPI_DATATYPE_NULL
 
 
-    !KWS create seperate double percision type for iterative solver
+    !create seperate double percision type for iterative solver
 #ifdef W3_ITDP
     integer :: p2DRsendType1Double = MPI_DATATYPE_NULL
-    integer :: p2DRrecvType1Double = MPI_DATATYPE_NULL !KWS to be filled
+    integer :: p2DRrecvType1Double = MPI_DATATYPE_NULL 
 #endif
 
   contains
@@ -233,7 +233,8 @@ contains
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
 
 #ifdef W3_ITDP
-    !KWS - Add seperate double percision 2D for iterative solver(Jacobi)
+    ! Add seperate double percision 2D for iterative solver(Jacobi),
+    ! needed for bit-for-bit reproducability.
     ! MPI datatypes for size(U) == npa  U(1:npa) double precision
     ! p2D real second dim is n2ndDim long
     dsplSend = (ipgl(this%nodesToSend)-1) * n2ndDim
