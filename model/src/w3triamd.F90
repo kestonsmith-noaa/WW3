@@ -2090,6 +2090,9 @@ CONTAINS
     use yowNodepool,    only: PDLIB_IEN, PDLIB_TRIA, NPA
     USE yowExchangeModule, only : PDLIB_exchange1Dreal
 #endif
+#ifdef W3_ITDP
+    double precision     :: DIFFXdouble(NX),DIFFYdouble(NX)
+#endif
 
     IMPLICIT NONE
 
@@ -2111,6 +2114,10 @@ CONTAINS
 
     DIFFX = 0.
     DIFFY = 0.
+#ifdef W3_ITDP
+    DIFFXdouble = 0.D0
+    DIFFYdouble = 0.D0
+#endif
     !
     IF (FLAGLL) THEN
       FACT=1./(DERA*RADIUS)
@@ -2137,7 +2144,7 @@ CONTAINS
         DVDYIE      = DOT_PRODUCT( VAR,DEDY)
         DIFFX(1,NI) = DIFFX(1,NI) + DVDXIE * LATMEAN
         DIFFY(1,NI) = DIFFY(1,NI) + DVDYIE
-      END DO
+        END DO
       DIFFX(1,:) = DIFFX(1,:)/WEI
       DIFFY(1,:) = DIFFY(1,:)/WEI
 #ifdef W3_PDLIB
@@ -2158,14 +2165,33 @@ CONTAINS
         VAR         = PARAM(MAPFS(1,NI_GL)) * FACT
         DVDXIE      = DOT_PRODUCT(VAR,DEDX)
         DVDYIE      = DOT_PRODUCT(VAR,DEDY)
+#ifdef W3_ITDP
+        DIFFXdouble(NI) = DIFFXdouble(NI) + DBLE(DVDXIE * LATMEAN)
+        DIFFYdouble(NI) = DIFFYdouble(NI) + DBLE(DVDYIE)
+#else
         DIFFX(1,NI) = DIFFX(1,NI) + DVDXIE * LATMEAN
         DIFFY(1,NI) = DIFFY(1,NI) + DVDYIE
+#endif
       END DO
+#ifdef W3_ITDP
+      DIFFXdouble(:) = DIFFXdouble(:)/DBLE(WEI)
+      DIFFYdouble(:) = DIFFYdouble(:)/DBLE(WEI)
+#else
       DIFFX(1,:) = DIFFX(1,:)/WEI_LOCAL
       DIFFY(1,:) = DIFFY(1,:)/WEI_LOCAL
-    ENDIF
+#endif
+
+      ENDIF
+
+#ifdef W3_ITDP
+    CALL PDLIB_exchange1Ddouble(DIFFXdouble(:))
+    DIFFX(1,:)=SNGL(DIFFXdouble(:))
+    CALL PDLIB_exchange1Ddouble(DIFFYdouble(:))
+    DIFFY(1,:)=SNGL(DIFFYdouble(:))
+#else
     CALL PDLIB_exchange1Dreal(DIFFX(1,:))
     CALL PDLIB_exchange1Dreal(DIFFY(1,:))
+#endif
 #endif
     !
   END SUBROUTINE UG_GRADIENTS

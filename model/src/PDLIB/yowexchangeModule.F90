@@ -46,6 +46,7 @@ module yowExchangeModule
   public :: PDLIB_exchange2Dreal, PDLIB_exchange2Dreal_zero
 #ifdef W3_ITDP
   public :: PDLIB_exchange2Ddouble
+  public :: PDLIB_exchange1Ddouble
 #endif
   !> Holds some data belong to a neighbor Domain
   type, public :: t_neighborDomain
@@ -96,6 +97,9 @@ module yowExchangeModule
 #ifdef W3_ITDP
     integer :: p2DRsendType1Double = MPI_DATATYPE_NULL
     integer :: p2DRrecvType1Double = MPI_DATATYPE_NULL 
+
+    integer :: p1DRsendType1Double = MPI_DATATYPE_NULL
+    integer :: p1DRrecvType1Double = MPI_DATATYPE_NULL 
 #endif
 
   contains
@@ -155,6 +159,13 @@ contains
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
 #ifdef W3_ITDP
     call mpi_type_free(this%p2DRsendType1Double, ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
+    call mpi_type_free(this%p2DRrecvType1Double, ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
+
+    call mpi_type_free(this%p1DRsendType1Double, ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
+    call mpi_type_free(this%p1DRrecvType1Double, ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
 #endif
 
@@ -248,11 +259,72 @@ contains
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
     call mpi_type_commit(this%p2DRrecvType1Double,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+
+    ! p1D double
+    call mpi_type_create_indexed_block(this%numNodesToSend, 1, dsplSend, rtype, this%p1DRsendTypeDouble,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+    call mpi_type_commit(this%p1DRsendTypeDouble,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+
+    call mpi_type_create_indexed_block(this%numNodesToReceive, 1, dsplRecv, rtype, this%p1DRrecvTypeDouble,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+    call mpi_type_commit(this%p1DRrecvTypeDouble,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+
 #endif
   end subroutine createMPIType
 
 
 #ifdef W3_ITDP
+  subroutine PDLIB_exchange1Ddouble(U)
+    use yowDatapool, only: comm, myrank
+    use yowNodepool, only: t_Node, nodes_global, np, ng, ghosts, npa
+    use yowerr
+    use MPI
+    implicit none
+    double precision, intent(inout) :: U(:)
+
+    integer :: i, ierr, tag
+    integer :: sendRqst(nConnDomains), recvRqst(nConnDomains)
+    integer :: recvStat(MPI_STATUS_SIZE, nConnDomains), sendStat(MPI_STATUS_SIZE, nConnDomains)
+    character(len=140) :: errmsg
+
+    if(size(U) /= npa) then
+      WRITE(errmsg, *) 'size(U)=', size(U), ' but npa=', npa
+      CALL ABORT(errmsg)
+    endif
+
+    ! post receives
+    do i=1, nConnDomains
+      tag = 10000 + myrank
+      call MPI_IRecv(U, 1, neighborDomains(i)%p1DRrecvTypeDouble, &
+           neighborDomains(i)%domainID-1, tag, comm, &
+           recvRqst(i), ierr)
+      if(ierr/=MPI_SUCCESS) then
+        CALL PARALLEL_ABORT("MPI_IRecv", ierr)
+      endif
+    enddo
+
+    ! post sends
+    do i=1, nConnDomains
+      tag = 10000 + (neighborDomains(i)%domainID-1)
+      call MPI_ISend(U, 1, neighborDomains(i)%p1DRsendTypeDouble, &
+           neighborDomains(i)%domainID-1, tag, comm, &
+           sendRqst(i), ierr);
+      if(ierr/=MPI_SUCCESS) then
+        CALL PARALLEL_ABORT("MPI_ISend", ierr)
+      endif
+    end do
+
+    ! Wait for completion
+    call mpi_waitall(nConnDomains, recvRqst, recvStat,ierr)
+    if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
+    call mpi_waitall(nConnDomains, sendRqst, sendStat,ierr)
+    if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
+  end subroutine PDLIB_exchange1Ddouble
+
+
+
   subroutine PDLIB_exchange2Ddouble(U)
     use yowDatapool, only: comm, myrank
     use yowNodepool, only: t_Node, nodes_global, np, ng, ghosts, npa
