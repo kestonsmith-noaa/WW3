@@ -98,8 +98,8 @@ module yowExchangeModule
     integer :: p2DRsendType1Double = MPI_DATATYPE_NULL
     integer :: p2DRrecvType1Double = MPI_DATATYPE_NULL 
 
-    integer :: p1DRsendType1Double = MPI_DATATYPE_NULL
-    integer :: p1DRrecvType1Double = MPI_DATATYPE_NULL 
+    integer :: p1DRsendTypeDouble = MPI_DATATYPE_NULL
+    integer :: p1DRrecvTypeDouble = MPI_DATATYPE_NULL
 #endif
 
   contains
@@ -163,9 +163,9 @@ contains
     call mpi_type_free(this%p2DRrecvType1Double, ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
 
-    call mpi_type_free(this%p1DRsendType1Double, ierr)
+    call mpi_type_free(this%p1DRsendTypeDouble, ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
-    call mpi_type_free(this%p1DRrecvType1Double, ierr)
+    call mpi_type_free(this%p1DRrecvTypeDouble, ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
 #endif
 
@@ -248,8 +248,10 @@ contains
     ! needed for bit-for-bit reproducability.
     ! MPI datatypes for size(U) == npa  U(1:npa) double precision
     ! p2D real second dim is n2ndDim long
+
     dsplSend = (ipgl(this%nodesToSend)-1) * n2ndDim
     dsplRecv = (ghostgl(this%nodesToReceive) + np -1) * n2ndDim
+
     call mpi_type_create_indexed_block(this%numNodesToSend, n2ndDim, dsplSend, MPI_DOUBLE_PRECISION, this%p2DRsendType1Double,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
     call mpi_type_commit(this%p2DRsendType1Double,ierr)
@@ -260,13 +262,23 @@ contains
     call mpi_type_commit(this%p2DRrecvType1Double,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
 
+
+    ! add 1D double precision for gradient com
+    ! MPI datatypes for size(U) == npa+1  U(0:npa)
+    dsplSend = ipgl(this%nodesToSend)
+    dsplRecv = ghostgl(this%nodesToReceive) + np
     ! p1D double
-    call mpi_type_create_indexed_block(this%numNodesToSend, 1, dsplSend, rtype, this%p1DRsendTypeDouble,ierr)
+    ! MPI datatypes for size(U) == npa  U(1:npa)
+
+    dsplSend(:) = dsplSend(:) - 1 ! C count from 0; FORTRAN count from 1
+    dsplRecv(:) = dsplRecv(:) - 1
+
+    call mpi_type_create_indexed_block(this%numNodesToSend, 1, dsplSend, MPI_DOUBLE_PRECISION, this%p1DRsendTypeDouble,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
     call mpi_type_commit(this%p1DRsendTypeDouble,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
 
-    call mpi_type_create_indexed_block(this%numNodesToReceive, 1, dsplRecv, rtype, this%p1DRrecvTypeDouble,ierr)
+    call mpi_type_create_indexed_block(this%numNodesToReceive, 1, dsplRecv, MPI_DOUBLE_PRECISION, this%p1DRrecvTypeDouble,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
     call mpi_type_commit(this%p1DRrecvTypeDouble,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)

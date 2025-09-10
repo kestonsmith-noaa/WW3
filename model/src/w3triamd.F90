@@ -2089,13 +2089,13 @@ CONTAINS
     USE yowElementpool
     use yowNodepool,    only: PDLIB_IEN, PDLIB_TRIA, NPA
     USE yowExchangeModule, only : PDLIB_exchange1Dreal
+#ifdef W3_ITDPX
+    USE yowExchangeModule, only : PDLIB_exchange1Ddouble
 #endif
-#ifdef W3_ITDP
-    double precision     :: DIFFXdouble(NX),DIFFYdouble(NX)
 #endif
+
 
     IMPLICIT NONE
-
 
     REAL, INTENT(IN)     :: PARAM(0:NSEA)
     REAL, INTENT(OUT)  :: DIFFX(:,:), DIFFY(:,:)
@@ -2112,12 +2112,15 @@ CONTAINS
     REAL                 :: WEI(NX), WEI_LOCAL(NSEAL)
     REAL*8               :: RTMP(NSEAL)
 
+#ifdef W3_PDLIB
+#ifdef W3_ITDPX
+    double precision     :: DIFFXdouble(1,NPA), DIFFYdouble(1,NPA)
+    DIFFXdouble(:,:) = 0.D0
+    DIFFYdouble(:,:) = 0.D0
+#endif
+#endif
     DIFFX = 0.
     DIFFY = 0.
-#ifdef W3_ITDP
-    DIFFXdouble = 0.D0
-    DIFFYdouble = 0.D0
-#endif
     !
     IF (FLAGLL) THEN
       FACT=1./(DERA*RADIUS)
@@ -2165,29 +2168,29 @@ CONTAINS
         VAR         = PARAM(MAPFS(1,NI_GL)) * FACT
         DVDXIE      = DOT_PRODUCT(VAR,DEDX)
         DVDYIE      = DOT_PRODUCT(VAR,DEDY)
-#ifdef W3_ITDP
-        DIFFXdouble(NI) = DIFFXdouble(NI) + DBLE(DVDXIE * LATMEAN)
-        DIFFYdouble(NI) = DIFFYdouble(NI) + DBLE(DVDYIE)
+#ifdef W3_ITDPX
+        DIFFXdouble(1,NI) = DIFFXdouble(1,NI) + DBLE(DVDXIE * LATMEAN)
+        DIFFYdouble(1,NI) = DIFFYdouble(1,NI) + DBLE(DVDYIE)
 #else
-        DIFFX(1,NI) = DIFFX(1,NI) + DVDXIE * LATMEAN
-        DIFFY(1,NI) = DIFFY(1,NI) + DVDYIE
+        DIFFX(NI) = DIFFX(NI) + DVDXIE * LATMEAN
+        DIFFY(NI) = DIFFY(NI) + DVDYIE
 #endif
       END DO
-#ifdef W3_ITDP
-      DIFFXdouble(:) = DIFFXdouble(:)/DBLE(WEI)
-      DIFFYdouble(:) = DIFFYdouble(:)/DBLE(WEI)
+#ifdef W3_ITDPX
+      DIFFXdouble(1,:) = DIFFXdouble(1,:)/DBLE(WEI_LOCAL)
+      DIFFYdouble(1,:) = DIFFYdouble(1,:)/DBLE(WEI_LOCAL)
 #else
-      DIFFX(1,:) = DIFFX(1,:)/WEI_LOCAL
-      DIFFY(1,:) = DIFFY(1,:)/WEI_LOCAL
+      DIFFX(:) = DIFFX(:)/WEI_LOCAL
+      DIFFY(:) = DIFFY(:)/WEI_LOCAL
 #endif
 
       ENDIF
 
-#ifdef W3_ITDP
-    CALL PDLIB_exchange1Ddouble(DIFFXdouble(:))
-    DIFFX(1,:)=SNGL(DIFFXdouble(:))
-    CALL PDLIB_exchange1Ddouble(DIFFYdouble(:))
-    DIFFY(1,:)=SNGL(DIFFYdouble(:))
+#ifdef W3_ITDPX
+    CALL PDLIB_exchange1Ddouble( DIFFXdouble(1,:) )
+    CALL PDLIB_exchange1Ddouble( DIFFYdouble(1,:) )
+    DIFFX(1,:)=SNGL(DIFFXdouble(1,:))
+    DIFFY(1,:)=SNGL(DIFFYdouble(1,:))
 #else
     CALL PDLIB_exchange1Dreal(DIFFX(1,:))
     CALL PDLIB_exchange1Dreal(DIFFY(1,:))
