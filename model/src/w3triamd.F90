@@ -2172,16 +2172,16 @@ CONTAINS
         DIFFXdouble(1,NI) = DIFFXdouble(1,NI) + DBLE(DVDXIE * LATMEAN)
         DIFFYdouble(1,NI) = DIFFYdouble(1,NI) + DBLE(DVDYIE)
 #else
-        DIFFX(NI) = DIFFX(NI) + DVDXIE * LATMEAN
-        DIFFY(NI) = DIFFY(NI) + DVDYIE
+        DIFFX(1,NI) = DIFFX(1,NI) + DVDXIE * LATMEAN
+        DIFFY(1,NI) = DIFFY(1,NI) + DVDYIE
 #endif
       END DO
 #ifdef W3_ITDPX
       DIFFXdouble(1,:) = DIFFXdouble(1,:)/DBLE(WEI_LOCAL)
       DIFFYdouble(1,:) = DIFFYdouble(1,:)/DBLE(WEI_LOCAL)
 #else
-      DIFFX(:) = DIFFX(:)/WEI_LOCAL
-      DIFFY(:) = DIFFY(:)/WEI_LOCAL
+      DIFFX(1,:) = DIFFX(1,:)/WEI_LOCAL
+      DIFFY(1,:) = DIFFY(1,:)/WEI_LOCAL
 #endif
 
       ENDIF
