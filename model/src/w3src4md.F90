@@ -248,7 +248,7 @@ CONTAINS
     !/ Parameter list
     !/
 !KWS    REAL, INTENT(IN)        :: A(NTH,NK), CG(NK), WN(NK), U, UDIR
-#ifdef W3_ITDPL
+#ifdef W3_ITDPLX
     REAL*8, INTENT(IN)        :: A(NTH,NK)
     REAL, INTENT(IN)        :: CG(NK), WN(NK), U, UDIR
 #else

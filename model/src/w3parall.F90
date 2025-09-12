@@ -689,7 +689,7 @@ CONTAINS
 #endif
     INTEGER, intent(in) :: ISEA, IP
     REAL, intent(in) :: DTG
-    #ifdef W3_ITDPP
+#ifdef W3_ITDPP
     REAL*8, intent(out) :: DMM(0:NK2)
     REAL*8, intent(out) :: CAS(NSPEC)
     REAL*8 :: DB(NK2), DSDD(0:NK+1)
@@ -855,8 +855,8 @@ CONTAINS
     INTEGER, intent(in) :: ISEA, IP
     REAL, intent(in) :: DTG
 #ifdef W3_ITDPP
-    REAL, intent(out) :: CWNB_M2(1-NTH:NSPEC)
-    REAL, intent(out) :: DWNI_M2(NK)
+    REAL*8, intent(out) :: CWNB_M2(1-NTH:NSPEC)
+    REAL*8, intent(out) :: DWNI_M2(NK)
     REAL*8 :: eDCXDX, eDCXDY, eDCYDX, eDCYDY, eCX, eCY, eDDDX, EDDDY
     REAL*8 :: DCXX, DCXYYX, DCYY, FKD, FACK
     REAL*8 :: DEPTH
@@ -876,8 +876,8 @@ CONTAINS
     REAL :: DSDD(0:NK+1)
     REAL :: sumDiff, sumDiff1, sumDiff2, sumDiff3
     REAL :: sumDiff0, sumDiff4, sumDiff5
-    INTEGER :: IK, ITH, ISP, IY, IX
 #endif
+    INTEGER :: IK, ITH, ISP, IY, IX
     !/ ------------------------------------------------------------------- /
 #ifdef W3_S
     CALL STRACE (IENT, 'PROP_FREQ_SHIFT_M2')

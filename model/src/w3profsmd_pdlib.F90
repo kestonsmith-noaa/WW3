@@ -4495,6 +4495,15 @@ CONTAINS
     REAL, INTENT(in) :: DTG
     INTEGER IP, IP_glob, ITH, IK
     INTEGER ISEA, ISP
+#ifdef W3_ITDPP
+    REAL*8  ::  eSI
+    REAL*8  :: B_SIG(NSPEC), B_THE(NSPEC)
+    REAL*8  :: CP_SIG(NSPEC), CM_SIG(NSPEC)
+    REAL*8  :: CP_THE(NSPEC), CM_THE(NSPEC)
+    REAL*8  :: CAD(NSPEC), CAS(NSPEC)
+    REAL*8  :: DMM(0:NK2), eVal
+    REAL*8  :: DWNI_M2(NK), CWNB_M2(1-NTH:NSPEC)
+#else
     REAL ::  eSI
     REAL  :: B_SIG(NSPEC), B_THE(NSPEC)
     REAL  :: CP_SIG(NSPEC), CM_SIG(NSPEC)
@@ -4502,6 +4511,7 @@ CONTAINS
     REAL  :: CAD(NSPEC), CAS(NSPEC)
     REAL  :: DMM(0:NK2), eVal
     REAL  :: DWNI_M2(NK), CWNB_M2(1-NTH:NSPEC)
+#endif
     LOGICAL :: DoLimiterRefraction = .FALSE.
     LOGICAL :: DoLimiterFreqShit   = .FALSE. !AR: This one is missing ...
     INTEGER :: ITH0
@@ -5620,7 +5630,12 @@ CONTAINS
     REAL*8  :: Sum_Prev, Sum_New, p_is_converged, DiffNew, prop_conv
     REAL*8  :: Sum_L2, Sum_L2_GL
 #ifdef W3_ITDPL
-    REAL*8  :: DMM(0:NK2), DAM(NSPEC), DAM2(NSPEC), SPEC(NSPEC) !KWS watch this space!!!
+    REAL*8  :: DMM(0:NK2), DAM(NSPEC), DAM2(NSPEC)
+#ifdef W3_ITDPLX
+    real*8 SPEC(NSPEC) !KWS watch this space!!!
+#else
+    real SPEC(NSPEC)
+#endif
 #else
     REAL  :: DMM(0:NK2), DAM(NSPEC), DAM2(NSPEC), SPEC(NSPEC)
 #endif
