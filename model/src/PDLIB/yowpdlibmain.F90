@@ -1365,7 +1365,7 @@ contains
       PDLIB_IEN(4,IE) =   DXP3
       PDLIB_IEN(5,IE) = - DYP1
       PDLIB_IEN(6,IE) =   DXP1
-      DBLTMP = (DXP3*DYP1 - DYP3*DXP1)*0.5
+      DBLTMP = (DXP3*DYP1 - DYP3*DXP1)*0.5D0
       PDLIB_TRIA(IE) = DBLTMP
       IF (PDLIB_TRIA(IE) .lt. TINY(1.)) THEN
         WRITE(*,*) PDLIB_IEN(:,IE)
@@ -1379,12 +1379,13 @@ contains
       PDLIB_CCON(I3) = PDLIB_CCON(I3) + 1
 
 #ifdef W3_ITDPSI
-      TRIA03         = DBLE( PDLIB_TRIA(IE) )/3.d0
+!KWS use double precision version      TRIA03         = DBLE( PDLIB_TRIA(IE) )/3.d0
+      TRIA03         = DBLTMP/3.D0
       PDLIB_SIdouble(I1) = PDLIB_SIdouble(I1) + TRIA03
       PDLIB_SIdouble(I2) = PDLIB_SIdouble(I2) + TRIA03
       PDLIB_SIdouble(I3) = PDLIB_SIdouble(I3) + TRIA03
 #else
-      TRIA03         = PDLIB_TRIA(IE)/3.d0
+      TRIA03         = PDLIB_TRIA(IE)/3.D0
       PDLIB_SI(I1) = PDLIB_SI(I1) + TRIA03
       PDLIB_SI(I2) = PDLIB_SI(I2) + TRIA03
       PDLIB_SI(I3) = PDLIB_SI(I3) + TRIA03

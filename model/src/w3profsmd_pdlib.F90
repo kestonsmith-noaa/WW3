@@ -4649,6 +4649,17 @@ CONTAINS
 #endif
     INTEGER IP, IP_glob, ITH, IK
     INTEGER ISEA, ISP
+            
+!KWS            CALL PROP_FREQ_SHIFT_M2(IP, ISEA, CWNB_M2, DWNI_M2, DTG)
+#ifdef W3_ITDPL
+    REAL*8  :: eSI
+    REAL*8  :: B_SIG(NSPEC), B_THE(NSPEC)
+    REAL*8  :: CP_SIG(NSPEC), CM_SIG(NSPEC)
+    REAL*8  :: CP_THE(NSPEC), CM_THE(NSPEC)
+    REAL*8  :: CAD(NSPEC), CAS(NSPEC)
+    REAL*8  :: DMM(0:NK2), eVal
+    REAL*8  :: DWNI_M2(NK), CWNB_M2(1-NTH:NSPEC)
+#else
     REAL ::  eSI
     REAL  :: B_SIG(NSPEC), B_THE(NSPEC)
     REAL  :: CP_SIG(NSPEC), CM_SIG(NSPEC)
@@ -4656,6 +4667,7 @@ CONTAINS
     REAL  :: CAD(NSPEC), CAS(NSPEC)
     REAL  :: DMM(0:NK2), eVal
     REAL  :: DWNI_M2(NK), CWNB_M2(1-NTH:NSPEC)
+#endif
     LOGICAL :: DoLimiterRefraction = .FALSE.
     LOGICAL :: DoLimiterFreqShit   = .FALSE. !AR: This one is missing ...
     INTEGER :: ITH0
@@ -5607,7 +5619,11 @@ CONTAINS
     REAL*8  :: eFactM1, eFactP1
     REAL*8  :: Sum_Prev, Sum_New, p_is_converged, DiffNew, prop_conv
     REAL*8  :: Sum_L2, Sum_L2_GL
+#ifdef W3_ITDPL
+    REAL*8  :: DMM(0:NK2), DAM(NSPEC), DAM2(NSPEC), SPEC(NSPEC) !KWS watch this space!!!
+#else
     REAL  :: DMM(0:NK2), DAM(NSPEC), DAM2(NSPEC), SPEC(NSPEC)
+#endif
     REAL*8  :: eDiff(NSPEC), eProd(NSPEC), eDiffB(NSPEC)
     REAL*8  :: DWNI_M2(NK), CWNB_M2(1-NTH:NSPEC)
     REAL  :: VAnew(NSPEC), VFLWN(1-NTH:NSPEC), JAC, JAC2
@@ -5932,8 +5948,8 @@ CONTAINS
             DO ISP=1,NSPEC
               ISPprevDir=ListISPprevDir(ISP)
               ISPnextDir=ListISPnextDir(ISP)
-              eA_THE = - DTG*eSI*MAX(ZERO,CAD(ISPprevDir))
-              eC_THE =   DTG*eSI*MIN(ZERO,CAD(ISPnextDir))
+              eA_THE = - DBLE( DTG )*eSI*MAX(ZERO,CAD(ISPprevDir))
+              eC_THE =   DBLE( DTG )*eSI*MIN(ZERO,CAD(ISPnextDir))
 #ifdef W3_ITDP
               eSum(ISP) = eSum(ISP) - eA_THE * VAdouble(ISPprevDir,IP)
               eSum(ISP) = eSum(ISP) - eC_THE * VAdouble(ISPnextDir,IP)
@@ -6085,7 +6101,7 @@ CONTAINS
                 IF (REFPARS(3) .LT. 0.5 .AND. IOBPD_LOC(ITH,IP) .EQ. 0 .AND. IOBPA_LOC(IP) .EQ. 0) THEN
 #ifdef W3_ITDP
                   !This may need to be dealt with for potential precision !! 
-                  VAdouble(ISP,IP) = VAOLD(ISP,IP) * IOBDP_LOC(IP) ! Restores reflected action spectra ...
+                  VAdouble(ISP,IP) = DBLE( VAOLD(ISP,IP) ) * IOBDP_LOC(IP) ! Restores reflected action spectra ...
 #else
                   VA(ISP,IP) = VAOLD(ISP,IP) * IOBDP_LOC(IP) ! Restores reflected action spectra ...
 #endif
@@ -6251,7 +6267,7 @@ CONTAINS
                   DO IK=2,NK
                     ISP  =ITH + (IK  -1)*NTH
                     ISPm1=ITH + (IK-1-1)*NTH
-                    eFactM1=CG(IK-1,ISEA) / CG1(IK)
+                    eFactM1=DBLE( CG(IK-1,ISEA) / CG1(IK) )
                     eA_SIG= - eSI*CP_SIG(ISPm1)/DMM(IK-1) * eFactM1
 #ifdef W3_ITDP
                     eSum(ISP) = eSum(ISP) - eA_SIG*VAdouble(ISPm1,IP)

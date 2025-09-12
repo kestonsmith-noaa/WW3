@@ -88,11 +88,15 @@ MODULE W3PARALL
 
   LOGICAL, PARAMETER   :: LSLOC = .true.
   INTEGER, PARAMETER   :: IMEM = 1
-
+#ifdef W3_ITDPP
+  REAL*8,  PARAMETER     :: ONESIXTH  = 1.0d0/6.0d0
+  REAL*8,  PARAMETER     :: ONETHIRD  = 1.0d0/3.0d0
+  REAL*8,  PARAMETER     :: ZERO      = 0.0d0
+#else
   REAL,  PARAMETER     :: ONESIXTH  = 1.0d0/6.0d0
   REAL,  PARAMETER     :: ONETHIRD  = 1.0d0/3.0d0
   REAL,  PARAMETER     :: ZERO      = 0.0d0
-
+#endif
   REAL*8,  PARAMETER     :: THR8      = TINY(1.d0)
   REAL,  PARAMETER     :: THR       = TINY(1.0)
 CONTAINS
@@ -283,6 +287,7 @@ CONTAINS
   !> @date   01-Jun-2018
   !>
   SUBROUTINE PROP_REFRACTION_PR1(ISEA,DTG, CAD)
+  !KWS NOT CALLED!!!
     !/
     !/                  +-----------------------------------+
     !/                  | WAVEWATCH III           NOAA/NCEP |
@@ -446,6 +451,7 @@ CONTAINS
   !> @date   01-Jun-2018
   !>
   SUBROUTINE PROP_REFRACTION_PR3(IP, ISEA, DTG, CAD, DoLimiter)
+  !KWS is used with FSREFRACTION
     !/
     !/                  +-----------------------------------+
     !/                  | WAVEWATCH III           NOAA/NCEP |
@@ -512,16 +518,29 @@ CONTAINS
 #ifdef W3_S
     INTEGER, SAVE           :: IENT = 0
 #endif
+#ifdef W3_ITDPP
+    REAL*8, intent(out) :: CAD(NSPEC)
+#else
     REAL, intent(out) :: CAD(NSPEC)
+#endif
+    
     INTEGER, intent(in) :: ISEA, IP
     REAL, intent(in) :: DTG
     logical, intent(in) :: DoLimiter
     INTEGER :: ISP, IK, ITH, IX, IY
+#ifdef W3_ITDPP
+    REAL*8 :: FRK(NK), FRG(NK), DSDD(0:NK+1)
+    REAL*8 :: FACTH, DCXY, DCYX, DCXXYY, DTTST
+    REAL*8 :: eDCXDX, eDCXDY, eDCYDX, eDCYDY, eDDDX, eDDDY, eCTHG0
+    REAL*8 :: VCFLT(NSPEC), DEPTH, FDG, CG1(0:NK+1), WN1(0:NK+1)
+    REAL*8 :: FDDMAX, CFLTHMAX, VELNOFILT, CTMAX_eff
+#else
     REAL :: FRK(NK), FRG(NK), DSDD(0:NK+1)
     REAL :: FACTH, DCXY, DCYX, DCXXYY, DTTST
     REAL :: eDCXDX, eDCXDY, eDCYDX, eDCYDY, eDDDX, eDDDY, eCTHG0
     REAL :: VCFLT(NSPEC), DEPTH, FDG, CG1(0:NK+1), WN1(0:NK+1)
     REAL :: FDDMAX, CFLTHMAX, VELNOFILT, CTMAX_eff
+#endif    
 #ifdef W3_S
     CALL STRACE (IENT, 'PROP_REFRACTION_PR3')
 #endif
@@ -669,14 +688,25 @@ CONTAINS
     INTEGER, SAVE           :: IENT = 0
 #endif
     INTEGER, intent(in) :: ISEA, IP
-    REAL, intent(out) :: DMM(0:NK2)
     REAL, intent(in) :: DTG
+    #ifdef W3_ITDPP
+    REAL*8, intent(out) :: DMM(0:NK2)
+    REAL*8, intent(out) :: CAS(NSPEC)
+    REAL*8 :: DB(NK2), DSDD(0:NK+1)
+    REAL*8 :: eDCXDX, eDCXDY, eDCYDX, eDCYDY, eCX, eCY, eDDDX, EDDDY
+    REAL*8 :: DCXX, DCXYYX, DCYY, FKD, FACK
+    REAL*8 :: VELNOFILT, VELFAC, DEPTH
+    REAL*8 :: CFLK(NK2,NTH), FKC(NTH), FKD0
+#else 
+    REAL, intent(out) :: DMM(0:NK2)
     REAL, intent(out) :: CAS(NSPEC)
     REAL :: DB(NK2), DSDD(0:NK+1)
     REAL :: eDCXDX, eDCXDY, eDCYDX, eDCYDY, eCX, eCY, eDDDX, EDDDY
     REAL :: DCXX, DCXYYX, DCYY, FKD, FACK
     REAL :: VELNOFILT, VELFAC, DEPTH
     REAL :: CFLK(NK2,NTH), FKC(NTH), FKD0
+#endif
+    
     INTEGER :: IK, ITH, ISP, IY, IX
 #ifdef W3_S
     CALL STRACE (IENT, 'PROP_FREQ_SHIFT')
@@ -823,10 +853,21 @@ CONTAINS
 #endif
 
     INTEGER, intent(in) :: ISEA, IP
+    REAL, intent(in) :: DTG
+#ifdef W3_ITDPP
     REAL, intent(out) :: CWNB_M2(1-NTH:NSPEC)
     REAL, intent(out) :: DWNI_M2(NK)
-    REAL, intent(in) :: DTG
-    !
+    REAL*8 :: eDCXDX, eDCXDY, eDCYDX, eDCYDY, eCX, eCY, eDDDX, EDDDY
+    REAL*8 :: DCXX, DCXYYX, DCYY, FKD, FACK
+    REAL*8 :: DEPTH
+    REAL*8 :: FKC(NTH), FKD0
+    REAL*8 :: VCWN(1-NTH:NSPEC+NTH)
+    REAL*8 :: DSDD(0:NK+1)
+    REAL*8 :: sumDiff, sumDiff1, sumDiff2, sumDiff3
+    REAL*8 :: sumDiff0, sumDiff4, sumDiff5
+#else
+    REAL, intent(out) :: CWNB_M2(1-NTH:NSPEC)
+    REAL, intent(out) :: DWNI_M2(NK)
     REAL :: eDCXDX, eDCXDY, eDCYDX, eDCYDY, eCX, eCY, eDDDX, EDDDY
     REAL :: DCXX, DCXYYX, DCYY, FKD, FACK
     REAL :: DEPTH
@@ -836,7 +877,7 @@ CONTAINS
     REAL :: sumDiff, sumDiff1, sumDiff2, sumDiff3
     REAL :: sumDiff0, sumDiff4, sumDiff5
     INTEGER :: IK, ITH, ISP, IY, IX
-
+#endif
     !/ ------------------------------------------------------------------- /
 #ifdef W3_S
     CALL STRACE (IENT, 'PROP_FREQ_SHIFT_M2')
@@ -874,10 +915,10 @@ CONTAINS
     !
     DEPTH  = MAX ( DMIN , DW(ISEA) )
     DO IK=0, NK+1
-      IF ( DEPTH*WN(IK,ISEA) .LT. 5. ) THEN
-        DSDD(IK) = MAX ( 0. , CG(IK,ISEA)*WN(IK,ISEA)-0.5*SIG(IK) ) / DEPTH
+      IF ( DEPTH*WN(IK,ISEA) .LT. 5.D0 ) THEN
+        DSDD(IK) = MAX ( 0.D0 , CG(IK,ISEA)*WN(IK,ISEA)-0.5D0*SIG(IK) ) / DEPTH
       ELSE
-        DSDD(IK) = 0.
+        DSDD(IK) = 0.D0
       END IF
     END DO
     ISP = -NTH
@@ -891,7 +932,7 @@ CONTAINS
 
     sumDiff=0
     DO ISP=1-NTH,NSPEC
-      CWNB_M2(ISP) = DBLE(0.5 * ( VCWN(ISP) + VCWN(ISP+NTH) ))
+      CWNB_M2(ISP) = DBLE(0.5D0 * ( VCWN(ISP) + VCWN(ISP+NTH) ))
       sumDiff = sumDiff + MAX(CWNB_M2(ISP), ZERO)
     END DO
     DO IK=1,NK

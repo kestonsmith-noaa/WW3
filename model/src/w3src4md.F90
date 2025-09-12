@@ -247,7 +247,13 @@ CONTAINS
     !/ ------------------------------------------------------------------- /
     !/ Parameter list
     !/
+!KWS    REAL, INTENT(IN)        :: A(NTH,NK), CG(NK), WN(NK), U, UDIR
+#ifdef W3_ITDPL
+    REAL*8, INTENT(IN)        :: A(NTH,NK)
+    REAL, INTENT(IN)        :: CG(NK), WN(NK), U, UDIR
+#else
     REAL, INTENT(IN)        :: A(NTH,NK), CG(NK), WN(NK), U, UDIR
+#endif
 #ifdef W3_FLX5
     REAL, INTENT(IN)        :: TAUA, TAUADIR, DAIR
 #endif
