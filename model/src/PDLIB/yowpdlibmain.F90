@@ -1313,19 +1313,32 @@ contains
   subroutine ComputeTRIA_IEN_SI_CCON
     use yowElementpool, only: ne, ne_global, INE, ielg
     use yowExchangeModule, only : PDLIB_exchange1Dreal
+#ifdef W3_ITDPSI
+    use yowExchangeModule, only : PDLIB_exchange1Ddouble
+#endif
     use yowerr,       only: parallel_abort
     use yowDatapool,    only: myrank
     use yowNodepool,    only: np_global, np, iplg, t_Node, ghostlg, ng, npa
     use yowNodepool,    only: x, y, z, PDLIB_SI, PDLIB_IEN, PDLIB_TRIA, PDLIB_CCON, PDLIB_TRIA03
 
     integer I1, I2, I3, stat, IE, NI(3)
+
+#ifdef W3_ITDPSI
+    real*8  :: DXP1, DXP2, DXP3, DYP1, DYP2, DYP3, DBLTMP, TRIA03
+    double precision :: PDLIB_SIdouble(npa)
+#else
     real  :: DXP1, DXP2, DXP3, DYP1, DYP2, DYP3, DBLTMP, TRIA03
+#endif
     logical :: CROSSES_DATELINE
 
     allocate(PDLIB_SI(npa), PDLIB_CCON(npa), PDLIB_IEN(6,ne), PDLIB_TRIA(ne), PDLIB_TRIA03(ne), stat=stat)
     if(stat/=0) call parallel_abort('SI allocation failure')
 
+#ifdef W3_ITDPSI
+    PDLIB_SIdouble(:)   = 0.0d0 ! Median Dual Patch Area of each Node
+#else
     PDLIB_SI(:)   = 0.0d0 ! Median Dual Patch Area of each Node
+#endif
     PDLIB_CCON(:) = 0     ! Number of connected Elements
     DO IE = 1 , ne
       I1 = INE(1,IE)
@@ -1364,13 +1377,30 @@ contains
       PDLIB_CCON(I1) = PDLIB_CCON(I1) + 1
       PDLIB_CCON(I2) = PDLIB_CCON(I2) + 1
       PDLIB_CCON(I3) = PDLIB_CCON(I3) + 1
+
+#ifdef W3_ITDPSI
+      TRIA03         = DBLE( PDLIB_TRIA(IE) )/3.d0
+      PDLIB_SIdouble(I1) = PDLIB_SIdouble(I1) + TRIA03
+      PDLIB_SIdouble(I2) = PDLIB_SIdouble(I2) + TRIA03
+      PDLIB_SIdouble(I3) = PDLIB_SIdouble(I3) + TRIA03
+#else
       TRIA03         = PDLIB_TRIA(IE)/3.d0
       PDLIB_SI(I1) = PDLIB_SI(I1) + TRIA03
       PDLIB_SI(I2) = PDLIB_SI(I2) + TRIA03
       PDLIB_SI(I3) = PDLIB_SI(I3) + TRIA03
+#endif
+
       PDLIB_TRIA03(IE) = TRIA03
     ENDDO
+
+#ifdef W3_ITDPSI
+    CALL PDLIB_exchange1Ddouble(PDLIB_SIdouble)
+    PDLIB_SI(:) = SNGL(PDLIB_SIdouble(:))
+#else
     CALL PDLIB_exchange1Dreal(PDLIB_SI)
+#endif
+
+
   end subroutine ComputeTRIA_IEN_SI_CCON
   !**********************************************************************
   !*                                                                    *
@@ -1380,7 +1410,11 @@ contains
     !   An element crossing the dateline has, e.g. a node with lon < 180
     !   and another 2 with lon > -180
 
-    REAL(rkind),  INTENT(IN)  :: RX1, RX2, RX3
+#ifdef W3_ITDPSI
+   REAL*8,  INTENT(IN)  :: RX1, RX2, RX3
+#else
+   REAL(rkind),  INTENT(IN)  :: RX1, RX2, RX3
+#endif
     LOGICAL, INTENT(OUT) :: CROSSES_DATELINE
     INTEGER :: R1GT180, R2GT180, R3GT180
     R1GT180 = MERGE(1, 0, ABS(RX1).GT.180)
@@ -1399,7 +1433,11 @@ contains
     !            This subroutine corrects the zonal distance to satifsy
     !            this requirement
 
+#ifdef W3_ITDPSI
+    REAL*8, INTENT(INOUT) :: DXP
+#else
     REAL(rkind), INTENT(INOUT) :: DXP
+#endif
     IF (DXP .le. -180) THEN
       DXP=DXP + 360
     END IF

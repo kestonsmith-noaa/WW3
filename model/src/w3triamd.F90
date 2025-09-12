@@ -2089,7 +2089,7 @@ CONTAINS
     USE yowElementpool
     use yowNodepool,    only: PDLIB_IEN, PDLIB_TRIA, NPA
     USE yowExchangeModule, only : PDLIB_exchange1Dreal
-#ifdef W3_ITDPX
+#ifdef W3_ITDPUG
     USE yowExchangeModule, only : PDLIB_exchange1Ddouble
 #endif
 #endif
@@ -2105,15 +2105,23 @@ CONTAINS
     INTEGER              :: VERTICES(3), NI(3), NI_GL(3)
     REAL                 :: TMP1(3), TMP2(3)
     INTEGER              :: I, IX, IE, IE_GL
+#ifdef W3_ITDPUG
+    REAL*8                 :: VAR(3), FACT, LATMEAN
+    REAL*8                 :: DIFFXTMP, DIFFYTMP
+    REAL*8                 :: DEDX(3), DEDY(3)
+    REAL*8                 :: DVDXIE, DVDYIE
+    REAL*8                 :: WEI(NX), WEI_LOCAL(NSEAL)
+#else
     REAL                 :: VAR(3), FACT, LATMEAN
     REAL                 :: DIFFXTMP, DIFFYTMP
     REAL                 :: DEDX(3), DEDY(3)
     REAL                 :: DVDXIE, DVDYIE
     REAL                 :: WEI(NX), WEI_LOCAL(NSEAL)
+#endif
     REAL*8               :: RTMP(NSEAL)
 
 #ifdef W3_PDLIB
-#ifdef W3_ITDPX
+#ifdef W3_ITDPUG
     double precision     :: DIFFXdouble(1,NPA), DIFFYdouble(1,NPA)
     DIFFXdouble(:,:) = 0.D0
     DIFFYdouble(:,:) = 0.D0
@@ -2150,25 +2158,35 @@ CONTAINS
         END DO
       DIFFX(1,:) = DIFFX(1,:)/WEI
       DIFFY(1,:) = DIFFY(1,:)/WEI
-#ifdef W3_PDLIB
+#ifdef W3_ITDPUG
     ELSE
       WEI_LOCAL = 0.
       DO IE = 1, NE
         NI      = INE(:,IE)
         IE_GL   = IELG(IE)
         NI_GL   = TRIGP(:,IE_GL)
+#ifdef W3_ITDPUG
+        LATMEAN = ONETHIRD * DBLE( SUM(CLATIS(MAPFS(1,NI_GL))) )
+!KWS        LATMEAN = 1.D0/3.D0 * DBLE( SUM(CLATIS(MAPFS(1,NI_GL))) )
+        WEI_LOCAL(NI) = WEI_LOCAL(NI) + 2.D0* DBLE( PDLIB_TRIA(IE) )
+#else
         LATMEAN = 1./3. * SUM(CLATIS(MAPFS(1,NI_GL)))
         WEI_LOCAL(NI) = WEI_LOCAL(NI) + 2.*PDLIB_TRIA(IE)
+#endif
         DEDX(1)     = PDLIB_IEN(1,IE)
         DEDX(2)     = PDLIB_IEN(3,IE)
         DEDX(3)     = PDLIB_IEN(5,IE)
         DEDY(1)     = PDLIB_IEN(2,IE)
         DEDY(2)     = PDLIB_IEN(4,IE)
         DEDY(3)     = PDLIB_IEN(6,IE)
+#ifdef W3_ITDPUG
+        VAR         = DBLE( PARAM(MAPFS(1,NI_GL)) ) * FACT
+#else
         VAR         = PARAM(MAPFS(1,NI_GL)) * FACT
+#endif
         DVDXIE      = DOT_PRODUCT(VAR,DEDX)
         DVDYIE      = DOT_PRODUCT(VAR,DEDY)
-#ifdef W3_ITDPX
+#ifdef W3_ITDPUG
         DIFFXdouble(1,NI) = DIFFXdouble(1,NI) + DBLE(DVDXIE * LATMEAN)
         DIFFYdouble(1,NI) = DIFFYdouble(1,NI) + DBLE(DVDYIE)
 #else
@@ -2176,17 +2194,16 @@ CONTAINS
         DIFFY(1,NI) = DIFFY(1,NI) + DVDYIE
 #endif
       END DO
-#ifdef W3_ITDPX
+#ifdef W3_ITDPUG
       DIFFXdouble(1,:) = DIFFXdouble(1,:)/DBLE(WEI_LOCAL)
       DIFFYdouble(1,:) = DIFFYdouble(1,:)/DBLE(WEI_LOCAL)
 #else
       DIFFX(1,:) = DIFFX(1,:)/WEI_LOCAL
       DIFFY(1,:) = DIFFY(1,:)/WEI_LOCAL
 #endif
-
       ENDIF
 
-#ifdef W3_ITDPX
+#ifdef W3_ITDPUG
     CALL PDLIB_exchange1Ddouble( DIFFXdouble(1,:) )
     CALL PDLIB_exchange1Ddouble( DIFFYdouble(1,:) )
     DIFFX(1,:)=SNGL(DIFFXdouble(1,:))

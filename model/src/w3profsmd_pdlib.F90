@@ -114,11 +114,13 @@ MODULE PDLIB_W3PROFSMD
 #ifdef W3_ITDP
   REAL*8, ALLOCATABLE   :: ASPAR_JAC(:,:), ASPAR_DIAG_SOURCES(:,:), ASPAR_DIAG_ALL(:,:), B_JAC(:,:)
   DOUBLE PRECISION, ALLOCATABLE :: U_JAC(:,:)
+  REAL*8, ALLOCATABLE     :: CAD_THE(:,:), CAS_SIG(:,:)
 #else
   REAL, ALLOCATABLE     :: ASPAR_JAC(:,:), ASPAR_DIAG_SOURCES(:,:), ASPAR_DIAG_ALL(:,:), B_JAC(:,:)
   REAL, ALLOCATABLE     :: U_JAC(:,:)
-#endif
   REAL, ALLOCATABLE     :: CAD_THE(:,:), CAS_SIG(:,:)
+#endif
+
   REAL, ALLOCATABLE     :: CWNB_SIG_M2(:,:)
   REAL, ALLOCATABLE     :: COFRM4(:)
   REAL*8, ALLOCATABLE   :: FLALL1(:,:,:), KELEM1(:,:,:)
@@ -4272,7 +4274,11 @@ CONTAINS
 #endif
     INTEGER, INTENT(IN) :: IP
     REAL, INTENT(in) :: DTG, FACX, FACY, VGX, VGY
+#ifdef W3_ITDPL
+    REAL*8, INTENT(out) :: ASPAR_DIAG_LOCAL(NSPEC), B_JAC_LOCAL(NSPEC), ASPAR_OFF_DIAG_LOCAL(NSPEC)
+#else
     REAL, INTENT(out) :: ASPAR_DIAG_LOCAL(NSPEC), B_JAC_LOCAL(NSPEC), ASPAR_OFF_DIAG_LOCAL(NSPEC)
+#endif
     !
     INTEGER :: IP1, IP2
     INTEGER :: ITH, IK
@@ -4283,6 +4289,23 @@ CONTAINS
 #ifdef W3_REF1
     INTEGER :: eIOBPDR
 #endif
+#ifdef W3_ITDPL
+    REAL*8  :: DTK, TMP3, D1, D2
+    REAL*8  :: LAMBDA(2)
+    REAL*8  :: CRFS(3), K(3)
+    REAL*8  :: KP(3), UV_CUR(3,2)
+    REAL*8  :: KM(3), CSX(3), CSY(3)
+    REAL*8  :: K1, eSI, eVS, eVD
+    REAL*8  :: eVal1, eVal2, eVal3
+    REAL*8  :: ien_local(6)
+    REAL*8  :: DELTAL(3), K_X(3,NK), K_Y(3,NK), K_U(3)
+    REAL*8  :: CRFS_X(3,NK), CRFS_Y(3,NK), CRFS_U(3)
+    REAL*8  :: NM, CGFAK(3,NK), CSINA(NTH), CCOSA(NTH)
+    REAL*8  :: TRIA03, SIDT, CCOS, CSIN
+    REAL*8  :: FL11_X, FL12_X, FL21_X, FL22_X, FL31_X, FL32_X
+    REAL*8  :: FL11_Y, FL12_Y, FL21_Y, FL22_Y, FL31_Y, FL32_Y
+    REAL*8  :: FL11_U, FL12_U, FL21_U, FL22_U, FL31_U, FL32_U
+#else
     REAL  :: DTK, TMP3, D1, D2
     REAL  :: LAMBDA(2)
     REAL  :: CRFS(3), K(3)
@@ -4298,7 +4321,7 @@ CONTAINS
     REAL  :: FL11_X, FL12_X, FL21_X, FL22_X, FL31_X, FL32_X
     REAL  :: FL11_Y, FL12_Y, FL21_Y, FL22_Y, FL31_Y, FL32_Y
     REAL  :: FL11_U, FL12_U, FL21_U, FL22_U, FL31_U, FL32_U
-
+#endif
     IP_glob              = iplg(IP)
     ASPAR_DIAG_LOCAL     = ZERO
     B_JAC_LOCAL          = ZERO
@@ -5596,8 +5619,11 @@ CONTAINS
     REAL :: ASPAR_DIAG(NSPEC)
 #endif
 ! next canidates for r*8 if B4B fails 
+#ifdef W3_ITDPL
+    REAL*8  :: aspar_diag_local(nspec), aspar_off_diag_local(nspec), b_jac_local(nspec)
+#else
     REAL  :: aspar_diag_local(nspec), aspar_off_diag_local(nspec), b_jac_local(nspec)
-
+#endif
     REAL*8 :: eDiffSing, eSumPart
     REAL  :: EMEAN, FMEAN, FMEAN1, WNMEAN, AMAX, U10ABS, U10DIR, TAUA, TAUADIR
     REAL  :: USTAR, USTDIR, TAUWX, TAUWY, CD, Z0, CHARN, FMEANWS, DLWMEAN
@@ -6196,8 +6222,9 @@ CONTAINS
               DO ISP=1,NSPEC
                 ISPprevDir=ListISPprevDir(ISP)
                 ISPnextDir=ListISPnextDir(ISP)
-                eA_THE = - DTG*eSI*MAX(ZERO,CAD(ISPprevDir))
-                eC_THE =   DTG*eSI*MIN(ZERO,CAD(ISPnextDir))
+                eA_THE = - DBLE(DTG)*eSI*MAX(ZERO,CAD(ISPprevDir))
+                eC_THE =   DBLE(DTG)*eSI*MIN(ZERO,CAD(ISPnextDir))
+
 #ifdef W3_ITDP
                 eSum(ISP) = eSum(ISP) - eA_THE*VAdouble(ISPprevDir,IP)
                 eSum(ISP) = eSum(ISP) - eC_THE*VAdouble(ISPnextDir,IP)
@@ -6271,6 +6298,9 @@ CONTAINS
     call cpu_time(TTime1) !timing
     IF (myrank == 0) WRITE(*,*) 'nbiter, total time ',nbiter, (TTime1-TTime0)  
     IF (myrank == 0) WRITE(*,*) 'nbiter, time per iteration',nbiter, (TTime1-TTime0)/real(nbiter)  
+    IF (myrank == 0) WRITE(*,*) 'FSREFRACTION,FSFREQSHIFT,FreqShiftMethod:',FSREFRACTION,FSFREQSHIFT,FreqShiftMethod
+    IF (myrank == 0) WRITE(*,*) 'FLSOU,B_JGS_LIMITER,LSIG:',FLSOU,B_JGS_LIMITER,LSIG
+
     !plugback in single precision VA
     DO IP = 1, npa
       VA(1:NSPEC,IP)=SNGL(VAdouble(1:NSPEC,IP))
