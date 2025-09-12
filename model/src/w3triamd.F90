@@ -2158,7 +2158,7 @@ CONTAINS
         END DO
       DIFFX(1,:) = DIFFX(1,:)/WEI
       DIFFY(1,:) = DIFFY(1,:)/WEI
-#ifdef W3_ITDPUG
+#ifdef W3_PDLIB
     ELSE
       WEI_LOCAL = 0.
       DO IE = 1, NE
@@ -2202,7 +2202,6 @@ CONTAINS
       DIFFY(1,:) = DIFFY(1,:)/WEI_LOCAL
 #endif
       ENDIF
-
 #ifdef W3_ITDPUG
     CALL PDLIB_exchange1Ddouble( DIFFXdouble(1,:) )
     CALL PDLIB_exchange1Ddouble( DIFFYdouble(1,:) )

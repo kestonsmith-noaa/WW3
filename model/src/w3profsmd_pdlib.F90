@@ -5852,7 +5852,7 @@ CONTAINS
 
         JSEA  = JX_TO_JSEA(IP)
         ISEA  = MAPFS(1,IP_glob)
-        eSI   = PDLIB_SI(IP)
+        eSI   = DBLE(PDLIB_SI(IP))
 #ifdef W3_ITDP
         ACLOC = VAdouble(:,JSEA)
 #else
@@ -6200,7 +6200,7 @@ CONTAINS
           IP_glob=iplg(IP)
           IF (IOBP_LOC(IP).eq.1) THEN
             JSEA=JX_TO_JSEA(IP)
-            eSI=PDLIB_SI(IP)
+            eSI=DBLE( PDLIB_SI(IP) )
             eSum=B_JAC(:,IP)
 #ifdef W3_ITDP
             ACLOC=VAdouble(:,IP)
