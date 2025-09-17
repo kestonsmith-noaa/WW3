@@ -3243,26 +3243,32 @@ CONTAINS
     USE W3SERVMD, only: STRACE
 #endif
     !
+#ifdef W3_ITDPJ
+    REAL*8, INTENT(IN)        :: A(NTH,NK), CG(NK), WN(NK)
+    REAL*8, INTENT(OUT)       :: EMEAN, FMEAN, WNMEAN, AMAX
+    REAL*8                    :: EB(NK), EBAND
+#else
     REAL, INTENT(IN)        :: A(NTH,NK), CG(NK), WN(NK)
     REAL, INTENT(OUT)       :: EMEAN, FMEAN, WNMEAN, AMAX
+    REAL                    :: EB(NK), EBAND
+#endif
     INTEGER                 :: IK, ITH
 #ifdef W3_S
     INTEGER, SAVE           :: IENT = 0
 #endif
-    REAL                    :: EB(NK), EBAND
 #ifdef W3_S
     CALL STRACE (IENT, 'W3SPR0')
 #endif
     !
-    EMEAN  = 0.
-    FMEAN  = 0.
-    WNMEAN = 0.
-    AMAX   = 0.
+    EMEAN  = 0.D0
+    FMEAN  = 0.D0
+    WNMEAN = 0.D0
+    AMAX   = 0.D0
     !
     ! 1.  Integral over directions
     !
     DO IK=1, NK
-      EB(IK) = 0.
+      EB(IK) = 0.D0
       DO ITH=1, NTH
         EB(IK) = EB(IK) + A(ITH,IK)
         AMAX   = MAX ( AMAX , A(ITH,IK) )
@@ -3631,6 +3637,23 @@ CONTAINS
     INTEGER :: IE, POS, JSEA
     INTEGER :: I1, I2, I3, NI(3)
     INTEGER :: counter, IB1, IB2, IBR
+    INTEGER :: IOBPTH1(NTH), IOBPTH2(NTH)
+
+#ifdef W3_ITDPJ
+    REAL*8    :: DTK, TMP3
+    REAL*8    :: LAMBDA(2), CXYY(2,3), CXY(2,NPA)
+    REAL*8    :: FL11, FL12
+    REAL*8    :: FL21, FL22
+    REAL*8    :: FL31, FL32
+    REAL*8    :: CRFS(3), K(3)
+    REAL*8    :: KP(3,NE)
+    REAL*8    :: KM(3), DELTAL(3,NE)
+    REAL*8    :: K1, eSI, eVS, eVD
+    REAL*8    :: eVal1, eVal2, eVal3
+    REAL*8    :: CG1, WN1
+    REAL*8    :: TRIA03, SIDT, CCOS, CSIN
+    REAL*8    :: SPEC(NSPEC), DEPTH, CCOSA(NTH), CSINA(NTH)
+#else
     REAL    :: DTK, TMP3
     REAL    :: LAMBDA(2), CXYY(2,3), CXY(2,NPA)
     REAL    :: FL11, FL12
@@ -3644,8 +3667,7 @@ CONTAINS
     REAL    :: CG1, WN1
     REAL    :: TRIA03, SIDT, CCOS, CSIN
     REAL    :: SPEC(NSPEC), DEPTH, CCOSA(NTH), CSINA(NTH)
-    INTEGER :: IOBPTH1(NTH), IOBPTH2(NTH)
-
+#endif
 #ifdef W3_DEBUGSOLVER
     WRITE(740+IAPROC,*) 'calcARRAY_JACOBI, begin'
     FLUSH(740+IAPROC)
@@ -3658,8 +3680,8 @@ CONTAINS
     I1     = 0
     I2     = 0
     I3     = 0
-    DTK    = 0
-    TMP3   = 0
+    DTK    = 0.D0
+    TMP3   = 0.D0
 
     CCOSA = FACX * ECOS(1:NTH)
     CSINA = FACX * ESIN(1:NTH)
@@ -3678,7 +3700,7 @@ CONTAINS
 #ifdef NOCGTABLE
         CALL WAVNU_LOCAL(SIG(IK),DW(IP_GLOB),WN1,CG1)
 #else
-        CG1    = CG(IK,IP_GLOB)
+        CG1    = DBLE(CG(IK,IP_GLOB))
 #endif
         CXY(1,IP) = CCOS * CG1/CLATS(IP_GLOB)
         CXY(2,IP) = CSIN * CG1
@@ -3733,25 +3755,25 @@ CONTAINS
 #ifdef W3_REF1
             IF (IBR == 1) THEN
               DTK               = KP(POS,IE) * DTG
-              B_JAC(ISP,IP)     = B_JAC(ISP,IP) + PDLIB_TRIA03(IE) * VA(ISP,IP)
+              B_JAC(ISP,IP)     = B_JAC(ISP,IP) + DBLE(PDLIB_TRIA03(IE) * VA(ISP,IP))
             ELSE
               DTK               = KP(POS,IE) * DTG * IB1
-              B_JAC(ISP,IP)     = B_JAC(ISP,IP) + PDLIB_TRIA03(IE) * VA(ISP,IP) * IB2
+              B_JAC(ISP,IP)     = B_JAC(ISP,IP) + DBLE(PDLIB_TRIA03(IE) * VA(ISP,IP)) * IB2
             ENDIF
 #else
             DTK               = KP(POS,IE) * DTG * IB1
-            B_JAC(ISP,IP)     = B_JAC(ISP,IP) + PDLIB_TRIA03(IE) * VA(ISP,IP) * IB2
+            B_JAC(ISP,IP)     = B_JAC(ISP,IP) + DBLE(PDLIB_TRIA03(IE) * VA(ISP,IP)) * IB2
 #endif
 
             I1  =  PDLIB_POSI(1,J)
             I2  =  PDLIB_POSI(2,J)
             I3  =  PDLIB_POSI(3,J)
             IF (FSGEOADVECT) THEN
-              ASPAR_JAC(ISP,I1) = ASPAR_JAC(ISP,I1) + PDLIB_TRIA03(IE) + DTK - DTK * DELTAL(POS,IE)
+              ASPAR_JAC(ISP,I1) = ASPAR_JAC(ISP,I1) + DBLE(PDLIB_TRIA03(IE)) + DTK - DTK * DELTAL(POS,IE)
               ASPAR_JAC(ISP,I2) = ASPAR_JAC(ISP,I2)                          - DTK * DELTAL(POS_TRICK(POS,1),IE)
               ASPAR_JAC(ISP,I3) = ASPAR_JAC(ISP,I3)                          - DTK * DELTAL(POS_TRICK(POS,2),IE)
             ELSE
-              ASPAR_JAC(ISP,I1) = ASPAR_JAC(ISP,I1) + PDLIB_TRIA03(IE)
+              ASPAR_JAC(ISP,I1) = ASPAR_JAC(ISP,I1) + DBLE(PDLIB_TRIA03(IE))
             ENDIF
           END DO
         ELSE
@@ -3759,9 +3781,9 @@ CONTAINS
             J = J + 1
             I1                =  PDLIB_POSI(1,J)
             IE                =  PDLIB_IE_CELL2(I,IP)
-            ASPAR_JAC(ISP,I1) = ASPAR_JAC(ISP,I1) + PDLIB_TRIA03(IE)
+            ASPAR_JAC(ISP,I1) = ASPAR_JAC(ISP,I1) + DBLE(PDLIB_TRIA03(IE))
           END DO
-          B_JAC(ISP,IP) = 0.
+          B_JAC(ISP,IP) = 0.D0
         ENDIF
       END DO
     END DO ! ISP
@@ -4833,15 +4855,28 @@ CONTAINS
     USE constants, only : TPI, TPIINV, GRAV
 
     REAL, INTENT(in) :: DTG
-    REAL, PARAMETER :: COEF4 = 5.0E-07
-    REAL, PARAMETER :: FACDAM = 1
     INTEGER JSEA, IP, IP_glob, ISEA
     INTEGER IK, ITH, ISP, IS0
     LOGICAL :: LBREAK
+
+!      CALL COMPUTE_MEAN_PARAM(SPEC_VA, CG1, WN1, EMEAN, FMEAN, WNMEAN, AMAX)
+!      CALL W3SDB1 ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, WNMEAN, CG1, LBREAK, VSDB, VDDB )
+
+#ifdef W3_ITDPJ
+    REAL*8, PARAMETER :: COEF4 = 5.0E-07
+    REAL*8, PARAMETER :: FACDAM = 1.D0
+    REAL*8 ::  eSI, eVS, eVD, SIDT
+    REAL*8 :: DEPTH, DAM(NSPEC), RATIO, MAXDAC, VSDB(NSPEC), VDDB(NSPEC)
+    REAL*8 :: PreVS, eDam, DVS, FREQ, EMEAN, FMEAN, WNMEAN, AMAX, CG1(NK),WN1(NK),SPEC_VA(NSPEC)
+    REAL*8 TheFactor
+#else
+    REAL, PARAMETER :: COEF4 = 5.0E-07
+    REAL, PARAMETER :: FACDAM = 1
     REAL ::  eSI, eVS, eVD, SIDT
     REAL :: DEPTH, DAM(NSPEC), RATIO, MAXDAC, VSDB(NSPEC), VDDB(NSPEC)
     REAL :: PreVS, eDam, DVS, FREQ, EMEAN, FMEAN, WNMEAN, AMAX, CG1(NK),WN1(NK),SPEC_VA(NSPEC)
     REAL TheFactor
+#endif
 
     DO JSEA = 1, NP
 
@@ -4860,38 +4895,45 @@ CONTAINS
             DAM(ITH+IS0) = DAM(1+IS0)
           END DO
         END DO
-
-        eSI    = PDLIB_SI(IP)
-        SIDT   = eSI * DTG
+#ifdef W3_ITDPJ
+	eSI    = DBLE(PDLIB_SI(IP))
+#else
+	eSI    = PDLIB_SI(IP)
+#endif
+	SIDT   = eSI * DTG
         DEPTH  = DW(ISEA)
 #ifdef W3_DB1
-        VSDB   = 0.
-        VDDB   = 0.
+        VSDB   = 0.D0
+        VDDB   = 0.D0
         CG1 = CG(1:NK,ISEA)
         WN1 = WN(1:NK,ISEA)
         DO IK=1,NK
           DO ITH=1,NTH
             ISP=ITH + (IK-1)*NTH
-            SPEC_VA(ISP) = VA(ISP,JSEA) * CG(IK,ISEA) / CLATS(ISEA)
+            SPEC_VA(ISP) = DBLE(VA(ISP,JSEA) * CG(IK,ISEA) / CLATS(ISEA))
           ENDDO
         ENDDO
         CALL COMPUTE_MEAN_PARAM(SPEC_VA, CG1, WN1, EMEAN, FMEAN, WNMEAN, AMAX)
         SELECT CASE (NINT(SDBSC))
         CASE(1)
+#ifdef W3_ITDPJ
+          CALL W3SDB1double ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, WNMEAN, CG1, LBREAK, VSDB, VDDB )
+#else
           CALL W3SDB1 ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, WNMEAN, CG1, LBREAK, VSDB, VDDB )
+#endif
         CASE(2)
           !CALL W3SDB2 ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, CG1, LBREAK, VSDB, VDDB )
         END SELECT
 #endif
 #ifdef W3_DB2
-        VSDB   = 0.
-        VDDB   = 0.
+        VSDB   = 0.D0
+        VDDB   = 0.D0
         CG1 = CG(1:NK,ISEA)
         WN1 = WN(1:NK,ISEA)
         DO IK=1,NK
           DO ITH=1,NTH
             ISP=ITH + (IK-1)*NTH
-            SPEC_VA(ISP) = VA(ISP,JSEA) * CG(IK,ISEA) / CLATS(ISEA)
+            SPEC_VA(ISP) = DBLE(VA(ISP,JSEA) * CG(IK,ISEA) / CLATS(ISEA))
           ENDDO
         ENDDO
         CALL COMPUTE_MEAN_PARAM(SPEC_VA, CG1, WN1, EMEAN, FMEAN, WNMEAN, AMAX)
@@ -4902,7 +4944,7 @@ CONTAINS
             ISP=ITH + (IK-1)*NTH
             IF (SHAVETOT(JSEA)) THEN ! Limit only the source term part ...
               MAXDAC    = FACDAM * DAM(ISP)
-              TheFactor = DTG / MAX ( 1. , (1.-DTG*VDTOT(ISP,JSEA)))
+              TheFactor = DBLE(DTG) / MAX ( 1.D0 , (1.D0-DTG*VDTOT(ISP,JSEA)))
               DVS       = VSTOT(ISP,JSEA) * TheFactor
               DVS       = SIGN(MIN(MAXDAC,ABS(DVS)),DVS)
               PreVS     = DVS / TheFactor
@@ -5000,16 +5042,25 @@ CONTAINS
 #else
     REAL, INTENT(inout) :: ASPAR_DIAG_LOCAL(:,:)
 #endif
-    REAL, PARAMETER :: COEF4 = 5.0E-07
-    REAL, PARAMETER :: FACDAM = 1
+
     INTEGER JSEA, IP, IP_glob, ISEA
     INTEGER IK, ITH, ISP, IS0
     LOGICAL :: LBREAK
+#ifdef W3_ITDPJ
+    REAL*8, PARAMETER :: COEF4 = 5.0E-07
+    REAL*8, PARAMETER :: FACDAM = 1.D0
+    REAL*8 ::  eSI, eVS, eVD, SIDT
+    REAL*8 :: DEPTH, DAM(NSPEC), RATIO, MAXDAC, VSDB(NSPEC), VDDB(NSPEC)
+    REAL*8 :: PreVS, eDam, DVS, FREQ, EMEAN, FMEAN, WNMEAN, AMAX, CG1(NK),WN1(NK),SPEC_VA(NSPEC)
+    REAL*8 TheFactor
+#else
+    REAL, PARAMETER :: COEF4 = 5.0E-07
+    REAL, PARAMETER :: FACDAM = 1
     REAL ::  eSI, eVS, eVD, SIDT
     REAL :: DEPTH, DAM(NSPEC), RATIO, MAXDAC, VSDB(NSPEC), VDDB(NSPEC)
     REAL :: PreVS, eDam, DVS, FREQ, EMEAN, FMEAN, WNMEAN, AMAX, CG1(NK),WN1(NK),SPEC_VA(NSPEC)
     REAL TheFactor
-
+#endif
     DO JSEA = 1, NP
 
       IP      = JSEA
@@ -5026,14 +5077,18 @@ CONTAINS
             DAM(ITH+IS0) = DAM(1+IS0)
           END DO
         END DO
+#ifdef W3_ITDPJ
+        eSI    = DBLE( PDLIB_SI(IP) )
+#else
         eSI    = PDLIB_SI(IP)
+#endif
         SIDT   = eSI * DTG
         DEPTH  = DW(ISEA)
 #ifdef W3_DB1
-        VSDB   = 0.
-        VDDB   = 0.
-        CG1 = CG(1:NK,ISEA)
-        WN1 = WN(1:NK,ISEA)
+        VSDB   = 0.D0
+        VDDB   = 0.D0
+        CG1 = DBLE(CG(1:NK,ISEA))
+        WN1 = DBLE(WN(1:NK,ISEA))
         DO IK=1,NK
           DO ITH=1,NTH
             ISP=ITH + (IK-1)*NTH
@@ -5043,20 +5098,24 @@ CONTAINS
         CALL COMPUTE_MEAN_PARAM(SPEC_VA, CG1, WN1, EMEAN, FMEAN, WNMEAN, AMAX)
         SELECT CASE (NINT(SDBSC))
         CASE(1)
+#ifdef W3_ITDPJ
+          CALL W3SDB1double ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, WNMEAN, CG1, LBREAK, VSDB, VDDB )
+#else
           CALL W3SDB1 ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, WNMEAN, CG1, LBREAK, VSDB, VDDB )
+#endif
         CASE(2)
           !CALL W3SDB2 ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, CG1, LBREAK, VSDB, VDDB )
         END SELECT
 #endif
 #ifdef W3_DB2
-        VSDB   = 0.
-        VDDB   = 0.
-        CG1 = CG(1:NK,ISEA)
-        WN1 = WN(1:NK,ISEA)
+        VSDB   = 0.D0
+        VDDB   = 0.D0
+        CG1 = DBLE(CG(1:NK,ISEA))
+        WN1 = DBLE(WN(1:NK,ISEA))
         DO IK=1,NK
           DO ITH=1,NTH
             ISP=ITH + (IK-1)*NTH
-            SPEC_VA(ISP) = VA(ISP,JSEA) * CG(IK,ISEA) / CLATS(ISEA)
+            SPEC_VA(ISP) = DBLE(VA(ISP,JSEA)) * CG(IK,ISEA) / CLATS(ISEA)
           ENDDO
         ENDDO
         CALL COMPUTE_MEAN_PARAM(SPEC_VA, CG1, WN1, EMEAN, FMEAN, WNMEAN, AMAX)
@@ -5067,7 +5126,7 @@ CONTAINS
             ISP=ITH + (IK-1)*NTH
             IF (SHAVETOT(JSEA)) THEN ! Limit only the source term part ...
               MAXDAC    = FACDAM * DAM(ISP)
-              TheFactor = DTG / MAX ( 1. , (1.-DTG*VDTOT(ISP,JSEA)))
+              TheFactor = DTG / MAX ( 1.D0 , (1.D0-DTG*VDTOT(ISP,JSEA)))
               DVS       = VSTOT(ISP,JSEA) * TheFactor
               DVS       = SIGN(MIN(MAXDAC,ABS(DVS)),DVS)
               PreVS     = DVS / TheFactor
@@ -5696,6 +5755,9 @@ CONTAINS
     memunit = 50000+IAPROC
     !AR: this is missing in init ... but there is a design error in ww3_grid with FLCUR and FLLEV
     LSIG = FLCUR .OR. FLLEV
+!KWS Checking for inconsistancy
+    if( myrank == 0 ) write(*,*)"LSIG = FLCUR .OR. FLLEV", LSIG,FLCUR,FLLEV
+
 #ifdef W3_DEBUGSOLVERCOH
     OffDIAG = ZERO
 #endif
@@ -5740,6 +5802,13 @@ CONTAINS
     CALL ALL_VA_INTEGRAL_PRINT(IMOD, "VA(np) before transform", 0)
     CALL ALL_VA_INTEGRAL_PRINT(IMOD, "VA(npa) before transform", 1)
 #endif
+#ifdef W3_ITDPF
+    DO IP = 1, np
+      VAdouble(1:NSPEC,IP)=DBLE(VA(1:NSPEC,IP))
+    ENDDO
+    CALL PDLIB_exchange2Ddouble(VAdouble)
+    call cpu_time(TTime0) !timing
+#endif
     DO JSEA=1,NSEAL
       IP      = JSEA
       IP_glob = iplg(IP)
@@ -5752,12 +5821,19 @@ CONTAINS
 #else
         CG1(IK)    = CG(IK,ISEA)
 #endif
+#ifdef W3_ITDPF
+        VAdouble(ISP,JSEA) = VAdouble(ISP,JSEA) / DBLE(CG1(IK)) * DBLE(CLATS(ISEA))
+#else
         VA(ISP,JSEA) = VA(ISP,JSEA) / CG1(IK) * CLATS(ISEA)
+#endif
       END DO
     END DO
 
+#ifdef W3_ITDPF
+    VAOLD = VAdouble(1:NSPEC,1:NSEAL)
+#else
     VAOLD = VA(1:NSPEC,1:NSEAL)
-
+#endif
 #ifdef W3_DEBUGSRC
     DO JSEA=1,NSEAL
       WRITE(740+IAPROC,*) 'JSEA=', JSEA
@@ -5796,6 +5872,8 @@ CONTAINS
     !
     !     source terms
     !
+
+    if (myrank==0)write(*,*)'FSSOURCE,IMEM, LSLOC ',FSSOURCE,IMEM, LSLOC 
     IF (FSSOURCE) THEN
       IF (.not. LSLOC) THEN
         IF (IMEM == 1) THEN
@@ -5824,6 +5902,7 @@ CONTAINS
     !
     !     spectral advection
     !
+    if (myrank==0)write(*,*)'FSFREQSHIFT, FSREFRACTION,IMEM ',FSFREQSHIFT, FSREFRACTION,IMEM  
     IF (FSFREQSHIFT .or. FSREFRACTION) THEN
       IF (IMEM == 1) THEN
         call calcARRAY_JACOBI_SPECTRAL_1(DTG)
@@ -5831,6 +5910,7 @@ CONTAINS
         call calcARRAY_JACOBI_SPECTRAL_2(DTG,ASPAR_DIAG_ALL)
       ENDIF
     END IF
+!KWS check next
     CALL APPLY_BOUNDARY_CONDITION(IMOD)
     call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION 6')
     !
@@ -5849,11 +5929,13 @@ CONTAINS
 #endif
     enddo
 #ifdef W3_ITDP
+#ifndef W3_ITDPF
     DO IP = 1, np
       VAdouble(1:NSPEC,IP)=DBLE(VA(1:NSPEC,IP))
     ENDDO
     CALL PDLIB_exchange2Ddouble(VAdouble)
     call cpu_time(TTime0) !timing
+#endif
 #endif
 !
       DO
@@ -6332,10 +6414,12 @@ CONTAINS
     IF (myrank == 0) WRITE(*,*) 'FSREFRACTION,FSFREQSHIFT,FreqShiftMethod:',FSREFRACTION,FSFREQSHIFT,FreqShiftMethod
     IF (myrank == 0) WRITE(*,*) 'FLSOU,B_JGS_LIMITER,LSIG:',FLSOU,B_JGS_LIMITER,LSIG
 
+#ifndef W3_ITDPE
     !plugback in single precision VA
     DO IP = 1, npa
       VA(1:NSPEC,IP)=SNGL(VAdouble(1:NSPEC,IP))
     ENDDO
+#endif
 #endif    
     
 #ifdef W3_DEBUGSOLVER
@@ -6392,8 +6476,12 @@ CONTAINS
 #else
         CG1(IK)    = CG(IK,ISEA)
 #endif
+#ifdef W3_ITDPE
+        eVA = MAX ( ZERO ,DBLE(CG1(IK))/ DBLE(CLATS(ISEA)) * VAdouble(ISP,IP) )
+#else
         eVA = MAX ( ZERO ,CG1(IK)/CLATS(ISEA)*REAL(VA(ISP,IP)) )
-        eVO = MAX ( ZERO ,CG1(IK)/CLATS(ISEA)*REAL(VAOLD(ISP,JSEA)) )
+#endif
+        eVO = MAX ( ZERO ,DBLE(CG1(IK))/DBLE(CLATS(ISEA) )*REAL(VAOLD(ISP,JSEA)) )
 #ifdef W3_DEBUGSRC
         SumACout=SumACout + REAL(VA(ISP,IP))
         VS_w3srce = VSTOT(ISP,JSEA) * DTG / MAX(1., (1. - DTG*VDTOT(ISP,JSEA)))
@@ -6410,7 +6498,11 @@ CONTAINS
         SumVAw3srce = SumVAw3srce + abs(eVA_w3srce)
 #endif
         VAOLD(ISP,JSEA) = eVO
+#ifdef W3_ITDPE
+        VAdouble(ISP,JSEA) = eVA
+#else
         VA(ISP,JSEA) = eVA
+#endif
       END DO
 #ifdef W3_DEBUGSRC
       WRITE(740+IAPROC,*) 'ISEA=', ISEA, ' IntDiff=', IntDiff, ' DTG=', DTG
@@ -6428,10 +6520,8 @@ CONTAINS
       WRITE(740+IAPROC,*) 'SumVA(in/out/w3srce)=', SumVAin, SumVAout, SumVAw3srce
       WRITE(740+IAPROC,*) 'SumACout=', SumACout
 #endif
-
       IF (FLSOU) THEN
         IF (B_JGS_LIMITER) THEN
-
           DO ISP=1,NSPEC
             IK   = 1 + (ISP-1)/NTH
             SPEC(ISP) = VAOLD(ISP,JSEA)
@@ -6477,13 +6567,22 @@ CONTAINS
               newdac     = VA(ISP,IP) - VAOLD(ISP,JSEA)
               maxdac     = max(DAM(ISP),DAM2(ISP))
               NEWDAC     = SIGN(MIN(MAXDAC,ABS(NEWDAC)), NEWDAC)
+#ifdef W3_ITDPE
+              VAdouble(ISP,IP) = max(ZERO, DBLE( VAOLD(ISP,IP) + NEWDAC ) )
+#else
               VA(ISP,IP) = max(0., VAOLD(ISP,IP) + NEWDAC)
+#endif
             ENDDO
           ENDDO
         ENDIF ! B_JGS_LIMITER
       ENDIF  ! FLSOU
     END DO ! JSEA
-
+#ifdef W3_ITDPE
+    !plugback in single precision VA
+    DO IP = 1, npa
+      VA(1:NSPEC,IP)=SNGL(VAdouble(1:NSPEC,IP))
+    ENDDO
+#endif
 #ifdef WEIGHTS
     INQUIRE ( FILE='weights.ww3', EXIST = lexist )
     if (.not. lexist) then
