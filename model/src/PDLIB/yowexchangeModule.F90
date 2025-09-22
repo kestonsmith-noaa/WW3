@@ -48,6 +48,10 @@ module yowExchangeModule
   public :: PDLIB_exchange2Ddouble
   public :: PDLIB_exchange1Ddouble
 #endif
+#ifdef W3_ITQP
+  public :: PDLIB_exchange2DQP
+  public :: PDLIB_exchange1DQP
+#endif
   !> Holds some data belong to a neighbor Domain
   type, public :: t_neighborDomain
 
@@ -100,6 +104,10 @@ module yowExchangeModule
 
     integer :: p1DRsendTypeDouble = MPI_DATATYPE_NULL
     integer :: p1DRrecvTypeDouble = MPI_DATATYPE_NULL
+#endif
+#ifdef W3_ITQP
+    integer :: p2DRsendType1Q = MPI_DATATYPE_NULL
+    integer :: p2DRrecvType1Q = MPI_DATATYPE_NULL 
 #endif
 
   contains
@@ -166,6 +174,12 @@ contains
     call mpi_type_free(this%p1DRsendTypeDouble, ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
     call mpi_type_free(this%p1DRrecvTypeDouble, ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
+#endif
+#ifdef W3_ITQP
+    call mpi_type_free(this%p2DRsendType1Q, ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
+    call mpi_type_free(this%p2DRrecvType1Q, ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("freeMPItype", ierr)
 #endif
 
@@ -284,7 +298,72 @@ contains
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
 
 #endif
+
+#ifdef W3_ITQP
+    ! Add seperate double percision 2D for iterative solver(Jacobi),
+    ! needed for bit-for-bit reproducability.
+    ! MPI datatypes for size(U) == npa  U(1:npa) double precision
+    ! p2D real second dim is n2ndDim long
+
+    dsplSend = (ipgl(this%nodesToSend)-1) * n2ndDim
+    dsplRecv = (ghostgl(this%nodesToReceive) + np -1) * n2ndDim
+
+    call mpi_type_create_indexed_block(this%numNodesToSend, n2ndDim, dsplSend, MPI_QUAD, this%p2DRsendType1Q,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+    call mpi_type_commit(this%p2DRsendType1Q,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+
+    call mpi_type_create_indexed_block(this%numNodesToReceive, n2ndDim, dsplRecv, MPI_QUAD, this%p2DRrecvType1Q,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+    call mpi_type_commit(this%p2DRrecvType1Q,ierr)
+    if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
+
+#endif
   end subroutine createMPIType
+
+  
+#ifdef W3_ITQP
+  
+  subroutine PDLIB_exchange2DQ(U)
+    use yowDatapool, only: comm, myrank
+    use yowNodepool, only: t_Node, nodes_global, np, ng, ghosts, npa
+    use yowerr
+    use MPI
+    USE W3ODATMD, only : IAPROC
+    implicit none
+    real(kind=real128), intent(inout) :: U(:,:)
+
+    integer :: i, ierr, tag
+    integer :: sendRqst(nConnDomains), recvRqst(nConnDomains)
+    integer :: recvStat(MPI_STATUS_SIZE, nConnDomains), sendStat(MPI_STATUS_SIZE, nConnDomains)
+    ! post receives
+    do i=1, nConnDomains
+      tag = 30000 + myrank
+      call MPI_IRecv(U, 1, neighborDomains(i)%p2DRrecvType1Q, &
+           neighborDomains(i)%domainID-1, tag, comm, &
+           recvRqst(i), ierr)
+      if(ierr/=MPI_SUCCESS) then
+        CALL PARALLEL_ABORT("MPI_IRecv", ierr)
+      endif
+    enddo
+    ! post sends
+    do i=1, nConnDomains
+      tag = 30000 + (neighborDomains(i)%domainID-1)
+      call MPI_ISend(U, 1, neighborDomains(i)%p2DRsendType1Q, &
+           neighborDomains(i)%domainID-1, tag, comm, &
+           sendRqst(i), ierr)
+      if(ierr/=MPI_SUCCESS) then
+        CALL PARALLEL_ABORT("MPI_ISend", ierr)
+      endif
+    end do
+    ! Wait for completion
+    call mpi_waitall(nConnDomains, recvRqst, recvStat,ierr)
+    if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
+    call mpi_waitall(nConnDomains, sendRqst, sendStat,ierr)
+    if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
+  end subroutine PDLIB_exchange2Q
+#endif
+
 
 
 #ifdef W3_ITDP
