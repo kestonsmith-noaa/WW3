@@ -49,8 +49,7 @@ module yowExchangeModule
   public :: PDLIB_exchange1Ddouble
 #endif
 #ifdef W3_ITQP
-  public :: PDLIB_exchange2DQP
-  public :: PDLIB_exchange1DQP
+  public :: PDLIB_exchange2DQ
 #endif
   !> Holds some data belong to a neighbor Domain
   type, public :: t_neighborDomain
@@ -308,12 +307,14 @@ contains
     dsplSend = (ipgl(this%nodesToSend)-1) * n2ndDim
     dsplRecv = (ghostgl(this%nodesToReceive) + np -1) * n2ndDim
 
-    call mpi_type_create_indexed_block(this%numNodesToSend, n2ndDim, dsplSend, MPI_QUAD, this%p2DRsendType1Q,ierr)
+!    call mpi_type_create_indexed_block(this%numNodesToSend, n2ndDim, dsplSend, MPI_QUAD, this%p2DRsendType1Q,ierr)
+    call mpi_type_create_indexed_block(this%numNodesToSend, n2ndDim, dsplSend, MPI_REAL16, this%p2DRsendType1Q,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
     call mpi_type_commit(this%p2DRsendType1Q,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
 
-    call mpi_type_create_indexed_block(this%numNodesToReceive, n2ndDim, dsplRecv, MPI_QUAD, this%p2DRrecvType1Q,ierr)
+!    call mpi_type_create_indexed_block(this%numNodesToReceive, n2ndDim, dsplRecv, MPI_QUAD, this%p2DRrecvType1Q,ierr)
+    call mpi_type_create_indexed_block(this%numNodesToReceive, n2ndDim, dsplRecv, MPI_REAL16, this%p2DRrecvType1Q,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
     call mpi_type_commit(this%p2DRrecvType1Q,ierr)
     if(ierr /= MPI_SUCCESS) CALL PARALLEL_ABORT("createMPIType", ierr)
@@ -325,13 +326,14 @@ contains
 #ifdef W3_ITQP
   
   subroutine PDLIB_exchange2DQ(U)
+    use iso_fortran_env, only: real128
     use yowDatapool, only: comm, myrank
     use yowNodepool, only: t_Node, nodes_global, np, ng, ghosts, npa
     use yowerr
     use MPI
     USE W3ODATMD, only : IAPROC
     implicit none
-    real(kind=real128), intent(inout) :: U(:,:)
+    real(real128), intent(inout) :: U(:,:)
 
     integer :: i, ierr, tag
     integer :: sendRqst(nConnDomains), recvRqst(nConnDomains)
@@ -361,7 +363,7 @@ contains
     if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
     call mpi_waitall(nConnDomains, sendRqst, sendStat,ierr)
     if(ierr/=MPI_SUCCESS) CALL PARALLEL_ABORT("waitall", ierr)
-  end subroutine PDLIB_exchange2Q
+  end subroutine PDLIB_exchange2DQ
 #endif
 
 

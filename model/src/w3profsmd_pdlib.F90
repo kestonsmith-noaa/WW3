@@ -88,6 +88,9 @@ MODULE PDLIB_W3PROFSMD
 #ifdef W3_S
   USE W3SERVMD, only: STRACE
 #endif
+#ifdef W3_ITQP
+  use iso_fortran_env, only: real128
+#endif
   !/
   !/ ------------------------------------------------------------------- /
   !/ Parameter list
@@ -114,7 +117,8 @@ MODULE PDLIB_W3PROFSMD
 #ifdef W3_ITDP
   REAL*8, ALLOCATABLE   :: ASPAR_JAC(:,:), ASPAR_DIAG_SOURCES(:,:), ASPAR_DIAG_ALL(:,:), B_JAC(:,:)
 #ifdef W3_ITQP
-  real(kind=real128), ALLOCATABLE :: U_JAC(:,:)
+  real(real128),ALLOCATABLE   :: U_JAC(:,:)
+!!  real(kind=real128), ALLOCATABLE :: U_JAC(:,:)
 #else
   double precision, ALLOCATABLE :: U_JAC(:,:)
 #endif
@@ -2804,7 +2808,7 @@ CONTAINS
     FLUSH(740+IAPROC)
 #endif
     IF (B_JGS_USE_JACOBI) THEN
-#ifdef ITQP
+#ifdef W3_ITQP
       CALL PDLIB_JACOBI_BLOCK_QUAD(IMOD, FACX, FACY, DTG, VGX, VGY, LCALC)
 #else
       CALL PDLIB_JACOBI_GAUSS_SEIDEL_BLOCK(IMOD, FACX, FACY, DTG, VGX, VGY, LCALC)
@@ -6269,7 +6273,9 @@ CONTAINS
 #endif        
       ELSE
 #ifdef W3_ITDP
+#ifndef W3_ITQP
         CALL PDLIB_exchange2Ddouble(U_JAC)
+#endif
         VAdouble(:,1:NPA) = U_JAC
 #else
         CALL PDLIB_exchange2DREAL(U_JAC)
@@ -8380,7 +8386,9 @@ CONTAINS
       call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION SOLVER LOOP 2')
       ! removed GAUSS SEIDEL
 #ifdef W3_ITDP
+#ifndef W3_ITQP
       CALL PDLIB_exchange2Ddouble(U_JAC)
+#endif
       VAdouble(:,1:NPA) = U_JAC
 #else
       CALL PDLIB_exchange2DREAL(U_JAC)
@@ -8605,15 +8613,6 @@ CONTAINS
             END DO
           END DO
 
-          DO IK = 1, NK
-            DO ITH = 1, NTH
-              ISP = ITH + (IK-1)*NTH
-            DO ITH=2, NTH
-              DAM(ITH+IS0) = DAM(1+IS0)
-            END DO
-          END DO
-
-          DAM2 = 0.
           DO IK=1, NK
             JAC2     = 1.D0/TPI/SIG(IK)
             FRLOCAL  = SIG(IK)*TPIINV
@@ -8726,7 +8725,7 @@ CONTAINS
     use yowExchangeModule, only : PDLIB_exchange2DQ
 #endif
 
-
+    use iso_fortran_env, only: real128
     USE MPI, only : MPI_SUM, MPI_INT
     USE W3ADATMD, only: MPI_COMM_WCMP
     USE W3GDATMD, only: NSEA, SIG, FACP, FLSOU
@@ -8810,7 +8809,7 @@ CONTAINS
 #ifdef WEIGHTS
     INTEGER :: ipiter(nseal), ipitergl(np_global), ipiterout(np_global)
 #endif
-    real(kind=real128):: VAdouble(NSPEC,npa)
+    real(real128):: VAdouble(NSPEC,npa)
     real TTime0,TTime1
     CHARACTER(len=128) eFile
     INTEGER ierr, i
@@ -9053,7 +9052,7 @@ CONTAINS
 
       call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION SOLVER LOOP 2')
       ! removed GAUSS SEIDEL
-      CALL PDLIB_exchange2Q(U_JAC)
+      CALL PDLIB_exchange2DQ(U_JAC)
       VAdouble(:,1:NPA) = U_JAC
       call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION SOLVER LOOP 3')
       !
@@ -9189,8 +9188,8 @@ CONTAINS
 #else
         CG1(IK)    = CG(IK,ISEA)
 #endif
-        eVA = MAX ( ZERO , VAdouble(ISP,IP) / PreCon(ISP,IP))
-        eVO = MAX ( ZERO ,  DBLE( VAOLD(ISP,IP) ) / PreCon(ISP,IP))
+        eVA = MAX ( ZERO , CG1(IK) / CLATS(ISEA) * VA(ISP,IP)   )
+        eVO = MAX ( ZERO , CG1(IK) / CLATS(ISEA) *VAOLD(ISP,IP) )
         VAOLD(ISP,JSEA) =  eVO
         VA(ISP,JSEA) = eVA
       END DO
@@ -9218,27 +9217,6 @@ CONTAINS
           !
           DO IK=1, NK
             IS0    = (IK-1)*NTH
-            DO ITH=2, NTH
-              DAM(ITH+IS0) = DAM(1+IS0)
-            END DO
-          END DO
-
-          DAM2 = 0.
-          DO IK=1, NK
-            JAC2     = 1.D0/TPI/SIG(IK)
-            FRLOCAL  = SIG(IK)*TPIINV
-            DAM2(1+(IK-1)*NTH) = 1.E-06 * GRAV/FRLOCAL**4 * USTAR * MAX(FMEANWS,FMEAN) * DTG * JAC2 * CG1(IK) / CLATS(ISEA)
-          END DO
-          DO IK=1, NK
-            IS0  = (IK-1)*NTH
-            DO ITH=2, NTH
-              DAM2(ITH+IS0) = DAM2(1+IS0)
-            END DO
-          END DO
-
-          DO IK = 1, NK
-            DO ITH = 1, NTH
-              ISP = ITH + (IK-1)*NTH
             DO ITH=2, NTH
               DAM(ITH+IS0) = DAM(1+IS0)
             END DO
