@@ -2801,7 +2801,7 @@ CONTAINS
 #endif
     IF (B_JGS_USE_JACOBI) THEN
 #ifdef W3_ITDPS
-      CALL PDLIB_JACOBI_BLOCK(IMOD, FACX, FACY, DTG, VGX, VGY, LCALC)
+      CALL PDLIB_JACOBI_BLOCK_DOUBLE(IMOD, FACX, FACY, DTG, VGX, VGY, LCALC)
 #else
       CALL PDLIB_JACOBI_GAUSS_SEIDEL_BLOCK(IMOD, FACX, FACY, DTG, VGX, VGY, LCALC)
 #endif      
@@ -8307,7 +8307,7 @@ CONTAINS
           eSum(1:NSPEC)  = eSum(1:NSPEC) / ASPAR_DIAG(1:NSPEC)
 
 ! REMOVED Gauss Siedel option!!!
-          U_JAC(1:NSPEC,IP) = eSum
+          U_JAC(1:NSPEC,IP) = eSum(1:NSPEC)
 #ifndef W3_ITDPSU
         ELSE  ! IF (.NOT. LCONVERGED(IP)) THEN This statement should go away
           esum = VAdouble(1:NSPEC,IP)
