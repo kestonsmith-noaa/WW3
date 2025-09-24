@@ -2800,7 +2800,7 @@ CONTAINS
     FLUSH(740+IAPROC)
 #endif
     IF (B_JGS_USE_JACOBI) THEN
-#ifdef ITDPS
+#ifdef W3_ITDPS
       CALL PDLIB_JACOBI_BLOCK(IMOD, FACX, FACY, DTG, VGX, VGY, LCALC)
 #else
       CALL PDLIB_JACOBI_GAUSS_SEIDEL_BLOCK(IMOD, FACX, FACY, DTG, VGX, VGY, LCALC)
@@ -5759,8 +5759,6 @@ CONTAINS
     memunit = 50000+IAPROC
     !AR: this is missing in init ... but there is a design error in ww3_grid with FLCUR and FLLEV
     LSIG = FLCUR .OR. FLLEV
-!KWS Checking for inconsistancy
-    if( myrank == 0 ) write(*,*)"LSIG = FLCUR .OR. FLLEV", LSIG,FLCUR,FLLEV
 
 #ifdef W3_DEBUGSOLVERCOH
     OffDIAG = ZERO
@@ -5771,6 +5769,8 @@ CONTAINS
     CCURX  = FACX
     CCURY  = FACY
     CALL MPI_COMM_RANK(MPI_COMM_WCMP, myrank, ierr)
+!KWS Checking for inconsistancy
+    if( myrank == 0 ) write(*,*)"LSIG = FLCUR .OR. FLLEV", LSIG,FLCUR,FLLEV
     !
 #ifdef W3_DEBUGSOLVER
     WRITE(740+IAPROC,*) 'PDLIB_JACOBI_GAUSS_SEIDEL_BLOCK, begin'
@@ -8161,7 +8161,8 @@ CONTAINS
     if (myrank==0)write(*,*)'FSSOURCE,IMEM, LSLOC ',FSSOURCE,IMEM, LSLOC
     IF (FSSOURCE) THEN
       IF (.not. LSLOC) THEN
-        call CALCARRAY_JACOBI_SOURCE_1(DTG)
+!KWS        call CALCARRAY_JACOBI_SOURCE_1(DTG)
+            call CALCARRAY_JACOBI_SOURCE_1DP(DTG,VAdouble,PreCon)
       ENDIF
     END IF
     call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION 4')
@@ -8563,8 +8564,8 @@ CONTAINS
     USE W3WDATMD, only: VA, VSTOT, VDTOT, SHAVETOT
     USE constants, only : TPI, TPIINV, GRAV
 !        PreCon(ISP,JSEA) = DBLE(CLATS(ISEA) ) / DBLE(CG1(IK))
-    REAL, INTENT(in) :: PreCon(nspec,npa)
-    REAL, INTENT(in) :: VAdouble(nspec,npa)
+    DOUBLE PRECISION, INTENT(in) :: PreCon(nspec,np)
+    DOUBLE PRECISION, INTENT(in) :: VAdouble(nspec,np)
     REAL, INTENT(in) :: DTG
     INTEGER JSEA, IP, IP_glob, ISEA
     INTEGER IK, ITH, ISP, IS0

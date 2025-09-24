@@ -156,8 +156,10 @@ MODULE W3WDATMD
 #endif
 #ifdef W3_PDLIB
 #ifdef W3_ITDPJ
-    REAL*8, POINTER     :: VSTOT(:,:), VDTOT(:,:)
-    REAL*8, POINTER     :: VAOLD(:,:)
+!KWS    REAL*8, POINTER     :: VSTOT(:,:), VDTOT(:,:)
+!KWS    REAL*8, POINTER     :: VAOLD(:,:)
+    REAL, POINTER     :: VSTOT(:,:), VDTOT(:,:)
+    REAL, POINTER     :: VAOLD(:,:)
 #else
     REAL, POINTER     :: VSTOT(:,:), VDTOT(:,:)
     REAL, POINTER     :: VAOLD(:,:)
