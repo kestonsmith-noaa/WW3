@@ -155,8 +155,13 @@ MODULE W3WDATMD
     REAL, POINTER :: SXX_zs(:), SXY_zs(:), SYY_zs(:)
 #endif
 #ifdef W3_PDLIB
+#ifdef W3_ITDPJ
+    REAL*8, POINTER     :: VSTOT(:,:), VDTOT(:,:)
+    REAL*8, POINTER     :: VAOLD(:,:)
+#else
     REAL, POINTER     :: VSTOT(:,:), VDTOT(:,:)
     REAL, POINTER     :: VAOLD(:,:)
+#endif
     LOGICAL, POINTER  :: SHAVETOT(:)
 #endif
     LOGICAL               :: DINIT, FL_ALL
