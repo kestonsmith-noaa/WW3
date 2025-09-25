@@ -8607,22 +8607,19 @@ CONTAINS
             DAM(ITH+IS0) = DAM(1+IS0)
           END DO
         END DO
-#ifdef W3_ITDPJ
+
 	eSI    = DBLE(PDLIB_SI(IP))
-#else
-	eSI    = PDLIB_SI(IP)
-#endif
-	SIDT   = eSI * DTG
+	SIDT   = eSI * DBLE(DTG)
         DEPTH  = DW(ISEA)
 #ifdef W3_DB1
         VSDB   = 0.D0
         VDDB   = 0.D0
-        CG1 = CG(1:NK,ISEA)
-        WN1 = WN(1:NK,ISEA)
+        CG1 = DBLE(CG(1:NK,ISEA))
+        WN1 = DBLE(WN(1:NK,ISEA))
         DO IK=1,NK
           DO ITH=1,NTH
             ISP=ITH + (IK-1)*NTH
-  !        PreCon(ISP,JSEA) = DBLE(CLATS(ISEA) ) / DBLE(CG1(IK))
+!         PreCon(ISP,JSEA) = DBLE(CLATS(ISEA) ) / DBLE(CG1(IK))
 !          SPEC_VA(ISP) = DBLE(VA(ISP,JSEA) * CG(IK,ISEA) / CLATS(ISEA))
           SPEC_VA(ISP) = VAdouble(ISP,JSEA) / PreCon(IK,ISEA)
           ENDDO
@@ -8630,11 +8627,7 @@ CONTAINS
         CALL COMPUTE_MEAN_PARAM(SPEC_VA, CG1, WN1, EMEAN, FMEAN, WNMEAN, AMAX)
         SELECT CASE (NINT(SDBSC))
         CASE(1)
-#ifdef W3_ITDPJ
           CALL W3SDB1double ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, WNMEAN, CG1, LBREAK, VSDB, VDDB )
-#else
-          CALL W3SDB1 ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, WNMEAN, CG1, LBREAK, VSDB, VDDB )
-#endif
         CASE(2)
           !CALL W3SDB2 ( JSEA, SPEC_VA, DEPTH, EMEAN, FMEAN, CG1, LBREAK, VSDB, VDDB )
         END SELECT
@@ -8642,8 +8635,8 @@ CONTAINS
 #ifdef W3_DB2
         VSDB   = 0.D0
         VDDB   = 0.D0
-        CG1 = CG(1:NK,ISEA)
-        WN1 = WN(1:NK,ISEA)
+        CG1 = DBLE(CG(1:NK,ISEA))
+        WN1 = DBLE(WN(1:NK,ISEA))
         DO IK=1,NK
           DO ITH=1,NTH
             ISP=ITH + (IK-1)*NTH
@@ -8660,11 +8653,11 @@ CONTAINS
             IF (SHAVETOT(JSEA)) THEN ! Limit only the source term part ...
               MAXDAC    = FACDAM * DAM(ISP)
               TheFactor = DBLE(DTG) / MAX ( 1.D0 , (1.D0-DBLE(DTG)*DBLE(VDTOT(ISP,JSEA))))
-              DVS       = VSTOT(ISP,JSEA) * TheFactor
+              DVS       = DBLE( VSTOT(ISP,JSEA) ) * TheFactor
               DVS       = SIGN(MIN(MAXDAC,ABS(DVS)),DVS)
               PreVS     = DVS / TheFactor
             ELSE
-              PreVS     = VSTOT(ISP,JSEA)
+              PreVS     = DBLE( VSTOT(ISP,JSEA) )
             END IF
 !            eVS = PreVS * CLATS(ISEA) / CG(IK,ISEA)
             eVS = PreVS * PreCon(IK,ISEA)
