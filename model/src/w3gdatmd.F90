@@ -990,9 +990,16 @@ MODULE W3GDATMD
     REAL                  :: DUMMY
 #endif
 #ifdef W3_DB1
-    REAL                  :: SDBC1, SDBC2
     LOGICAL               :: FDONLY
+
+#ifdef W3_ITDPS
+    REAL*8                  :: SDBC1, SDBC2
+    REAL*8                  :: SDBSC
+#else
+    REAL                  :: SDBC1, SDBC2
     REAL                  :: SDBSC
+#endif
+
 #endif
   END TYPE SDBP
 
@@ -1393,9 +1400,14 @@ MODULE W3GDATMD
   !/ Data aliasses for structure SDBP(S)
   !/
 #ifdef W3_DB1
-  REAL, POINTER           :: SDBC1, SDBC2
   LOGICAL, POINTER        :: FDONLY
+#ifdef W3_ITDPS
+  REAL*8, POINTER           :: SDBC1, SDBC2
+  REAL*8, POINTER           :: SDBSC
+#else
+  REAL, POINTER           :: SDBC1, SDBC2
   REAL, POINTER           :: SDBSC
+#endif
 #endif
   !/
 #ifdef W3_UOST

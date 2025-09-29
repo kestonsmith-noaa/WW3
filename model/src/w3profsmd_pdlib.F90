@@ -4556,7 +4556,7 @@ CONTAINS
             CALL PROP_FREQ_SHIFT(IP, ISEA, CAS, DMM, DTG)
             CP_SIG = MAX(ZERO,CAS)
             CM_SIG = MIN(ZERO,CAS)
-            B_SIG=0
+            B_SIG=0.d0
             DO ITH=1,NTH
               DO IK=1,NK
                 ISP=ITH + (IK-1)*NTH
@@ -4567,7 +4567,7 @@ CONTAINS
             END DO
             ASPAR_JAC(:,PDLIB_I_DIAG(IP))=ASPAR_JAC(:,PDLIB_I_DIAG(IP)) + B_SIG(:)*eSI
           ELSE
-            CAS=0
+            CAS=0.d0
           END IF
           CAS_SIG(:,IP) = CAS
         ELSE IF (FreqShiftMethod .eq. 2) THEN
@@ -4587,7 +4587,7 @@ CONTAINS
               ASPAR_JAC(ITH0 + ITH,PDLIB_I_DIAG(IP)) = ASPAR_JAC(ITH0 + ITH,PDLIB_I_DIAG(IP)) + eSI * eVal
             END DO
           ELSE
-            CWNB_M2 = 0
+            CWNB_M2 = 0.d0
           END IF
           CWNB_SIG_M2(:,IP)=CWNB_M2
         END IF
@@ -8599,7 +8599,8 @@ CONTAINS
       IF ((IOBP_LOC(IP).eq.1..or.IOBP_LOC(JSEA).eq. 3).and.IOBDP_LOC(IP).eq.1.and.IOBPA_LOC(IP).eq.0) THEN
 
         DO IK=1, NK
-          DAM(1+(IK-1)*NTH) = DBLE(FACP) / ( DBLE(SIG(IK)) * DBLE(WN(IK,ISEA))**3 )
+!KWS          DAM(1+(IK-1)*NTH) = DBLE(FACP) / ( DBLE(SIG(IK)) * DBLE(WN(IK,ISEA))**3 )
+          DAM(1+(IK-1)*NTH) = DBLE( FACP / ( SIG(IK) * WN(IK,ISEA)**3 ) ) 
         END DO
         DO IK=1, NK
           IS0    = (IK-1)*NTH
@@ -8650,7 +8651,8 @@ CONTAINS
         DO IK=1,NK
           DO ITH=1,NTH
             ISP=ITH + (IK-1)*NTH
-            IF (SHAVETOT(JSEA)) THEN ! Limit only the source term part ...
+!KWS            IF (SHAVETOT(JSEA)) THEN ! Limit only the source term part ...
+            IF (.false.) THEN ! Limit only the source term part ...
               MAXDAC    = FACDAM * DAM(ISP)
               TheFactor = DBLE(DTG) / MAX ( 1.D0 , (1.D0-DBLE(DTG)*DBLE(VDTOT(ISP,JSEA))))
               DVS       = DBLE( VSTOT(ISP,JSEA) ) * TheFactor
@@ -8670,6 +8672,10 @@ CONTAINS
             eVS = eVS + VSDB(ISP) * PreCon(IK,ISEA)
             eVD = evD + VDDB(ISP)
 #endif
+!KWS Dummy RHS
+            eVD=0.0000001d0
+	    eVS=eVD*PreCon(IK,ISEA)
+
             B_JAC(ISP,IP)                   = B_JAC(ISP,IP) + SIDT * (eVS - eVD*VAdouble(ISP,JSEA))
             ASPAR_JAC(ISP,PDLIB_I_DIAG(IP)) = ASPAR_JAC(ISP,PDLIB_I_DIAG(IP)) - SIDT * eVD
           END DO

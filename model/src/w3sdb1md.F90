@@ -557,12 +557,12 @@ CONTAINS
     ! 1.a.1. Simple limit
     !
     IF ( FDONLY ) THEN
-      HM     = DBLE(SDBC2) * DBLE(DEPTH)
+      HM     = SDBC2 * DEPTH
     ELSE
       !
       ! 1.a.2. Miche style criterion
       !
-      HM     = DBLE(SDBC2) / DBLE(WNMEAN) * TANH ( DBLE(WNMEAN) * MAX(DEPTH,0.d0) )
+      HM     = SDBC2 / DBLE(WNMEAN) * TANH ( DBLE(WNMEAN) * MAX(DEPTH,0.d0) )
     END IF
     !
     !AR: Add Dingemans ...
@@ -602,13 +602,13 @@ CONTAINS
     !
     ! 3. Estimate the breaking coefficient ------------------------------- /
     !
-    CBJ  = 0
+    CBJ  = 0.d0
     IF (IWB == 1) THEN
       IF ( ( BB .GT. THR) .AND. ( ABS ( BB - QB ) .GT. THR) ) THEN
         IF ( BB .LT. 1.0) THEN
-          CBJ = 2.d0 * DBLE(SDBC1) * QB * DBLE(FMEAN) / BB
+          CBJ = 2.d0 * SDBC1 * QB * FMEAN / BB
         ELSE
-          CBJ = 2.d0 * DBLE(SDBC1) * DBLE(FMEAN) * BB ! AR: degenerative regime, all waves must be .le. Hmax, we just smoothly let the excessive energy vanish by * BB.
+          CBJ = 2.d0 * SDBC1 * FMEAN * BB ! AR: degenerative regime, all waves must be .le. Hmax, we just smoothly let the excessive energy vanish by * BB.
         END IF
       ELSE
         CBJ = 0.d0
