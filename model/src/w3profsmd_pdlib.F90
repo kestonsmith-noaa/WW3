@@ -8126,12 +8126,12 @@ CONTAINS
 
 #ifdef W3_ITDPPC
         PreCon(ISP,JSEA) = DBLE(CLATS(ISEA) ) / DBLE(CG1(IK))
-        VAdouble(ISP,JSEA) = DBLE(VA(ISP,JSEA))
         VAdouble(ISP,JSEA) = VAdouble(ISP,JSEA) * PreCon(ISP,JSEA)
-!        VAdouble(ISP,JSEA) = VAdouble(ISP,JSEA) * PreCon(ISP,JSEA)
-!        VAdouble(ISP,JSEA) = VAdouble(ISP,JSEA) / DBLE(CG1(IK)) * DBLE(CLATS(ISEA))
-#endif
         VA(ISP,JSEA) = VA(ISP,JSEA) / CG1(IK) * CLATS(ISEA)
+#else
+        VA(ISP,JSEA) = VA(ISP,JSEA) / CG1(IK) * CLATS(ISEA)
+        VAdouble(ISP,JSEA) = DBLE( VA(ISP,JSEA) )
+#endif
       END DO
     END DO
 
@@ -8161,8 +8161,11 @@ CONTAINS
     if (myrank==0)write(*,*)'FSSOURCE,IMEM, LSLOC ',FSSOURCE,IMEM, LSLOC
     IF (FSSOURCE) THEN
       IF (.not. LSLOC) THEN
-!KWS        call CALCARRAY_JACOBI_SOURCE_1(DTG)
-            call CALCARRAY_JACOBI_SOURCE_1DP(DTG,VAdouble,PreCon)
+#ifdef W3_ITDPPC
+        call CALCARRAY_JACOBI_SOURCE_1DP(DTG,VAdouble,PreCon)
+#else
+        call CALCARRAY_JACOBI_SOURCE_1(DTG)
+#endif
       ENDIF
     END IF
     call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION 4')
@@ -8651,8 +8654,7 @@ CONTAINS
         DO IK=1,NK
           DO ITH=1,NTH
             ISP=ITH + (IK-1)*NTH
-!KWS            IF (SHAVETOT(JSEA)) THEN ! Limit only the source term part ...
-            IF (.false.) THEN ! Limit only the source term part ...
+            IF (SHAVETOT(JSEA)) THEN ! Limit only the source term part ...
               MAXDAC    = FACDAM * DAM(ISP)
               TheFactor = DBLE(DTG) / MAX ( 1.D0 , (1.D0-DBLE(DTG)*DBLE(VDTOT(ISP,JSEA))))
               DVS       = DBLE( VSTOT(ISP,JSEA) ) * TheFactor
@@ -8672,10 +8674,6 @@ CONTAINS
             eVS = eVS + VSDB(ISP) * PreCon(IK,ISEA)
             eVD = evD + VDDB(ISP)
 #endif
-!KWS Dummy RHS
-            eVD=0.0000001d0
-	    eVS=eVD*PreCon(IK,ISEA)
-
             B_JAC(ISP,IP)                   = B_JAC(ISP,IP) + SIDT * (eVS - eVD*VAdouble(ISP,JSEA))
             ASPAR_JAC(ISP,PDLIB_I_DIAG(IP)) = ASPAR_JAC(ISP,PDLIB_I_DIAG(IP)) - SIDT * eVD
           END DO
