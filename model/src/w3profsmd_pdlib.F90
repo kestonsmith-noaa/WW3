@@ -8082,7 +8082,7 @@ CONTAINS
 #endif
     DOUBLE PRECISION :: VAdouble(NSPEC,npa)
     real TTime0,TTime1
-#endif
+
     CHARACTER(len=128) eFile
     INTEGER ierr, i
     INTEGER JP_glob
@@ -8427,7 +8427,7 @@ CONTAINS
     DO IP = 1, npa
       DO ISP=1,NSPEC
         ITH    = 1 + MOD(ISP-1,NTH)
-        if ( (IOBDP_LOC(IP) .eq. 0).or (IOBPD_LOC(ITH,IP).eq.0) ) then
+        if ( (IOBDP_LOC(IP) .eq. 0) .or. (IOBPD_LOC(ITH,IP).eq.0) ) then
           VA(ISP,IP) = 0.D0
           VAdouble(ISP,IP) = 0.D0
         endif
