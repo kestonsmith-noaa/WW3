@@ -1588,8 +1588,8 @@ CONTAINS
                 ENDIF
                 PreVS  = DVS / FAKS
                 IF (IOBP_LOC(JSEA) .EQ. 3) THEN
-                  eVS = 0
-                  eVD = 0
+                  eVS = 0.
+                  eVD = 0.
                 ELSE
                   eVS    = PreVS / CG1(IK) * CLATSL
                   eVD    = MIN(0.,VD(ISP))
@@ -1600,11 +1600,11 @@ CONTAINS
                 eVS = VSDB(ISP) * JAC
                 eVD = MIN(0.,VDDB(ISP))
                 IF (eVS .gt. 0.) THEN
-                  evS = 2*evS
+                  evS = 2.*evS
                   evD = -evD
                 ELSE
                   evS = -evS
-                  evD = 2*evD
+                  evD = 2.*evD
                 ENDIF
                 B_JAC(ISP,JSEA)                   = B_JAC(ISP,JSEA) + SIDT * eVS
                 ASPAR_JAC(ISP,PDLIB_I_DIAG(JSEA)) = ASPAR_JAC(ISP,PDLIB_I_DIAG(JSEA)) - SIDT * eVD
@@ -1614,11 +1614,11 @@ CONTAINS
                 eVS = VSTR(ISP) * JAC
                 eVD = VDTR(ISP)
                 IF (eVS .gt. 0.) THEN
-                  evS = 2*evS
+                  evS = 2.*evS
                   evD = -evD
                 ELSE
                   evS = -evS
-                  evD = 2*evD
+                  evD = 2.*evD
                 ENDIF
                 B_JAC(ISP,JSEA)                   = B_JAC(ISP,JSEA) + SIDT * eVS
                 ASPAR_JAC(ISP,PDLIB_I_DIAG(JSEA)) = ASPAR_JAC(ISP,PDLIB_I_DIAG(JSEA)) - SIDT * eVD
