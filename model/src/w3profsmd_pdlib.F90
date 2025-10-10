@@ -8060,6 +8060,7 @@ CONTAINS
     REAL  :: VAinput(NSPEC), VAacloc(NSPEC)
 #ifdef W3_ITDP
     REAL*8 :: ASPAR_DIAG(NSPEC)
+    REAL*8 :: ASPAR_DIAG_INV(NSPEC,NPA)
 #else
     REAL :: ASPAR_DIAG(NSPEC)
 #endif
@@ -8079,12 +8080,8 @@ CONTAINS
 #ifdef WEIGHTS
     INTEGER :: ipiter(nseal), ipitergl(np_global), ipiterout(np_global)
 #endif
-#ifdef W3_ITDP
     DOUBLE PRECISION :: VAdouble(NSPEC,npa)
     real TTime0,TTime1
-#endif
-#ifdef W3_ITDPPC
-    DOUBLE PRECISION :: PreCon(NSPEC,npa)
 #endif
     CHARACTER(len=128) eFile
     INTEGER ierr, i
@@ -8123,41 +8120,23 @@ CONTAINS
 #else
         CG1(IK)    = CG(IK,ISEA)
 #endif
-
-#ifdef W3_ITDPPC
-        PreCon(ISP,JSEA) = DBLE(CLATS(ISEA) ) / DBLE(CG1(IK))
-        VAdouble(ISP,JSEA) = VAdouble(ISP,JSEA) * PreCon(ISP,JSEA)
-        VA(ISP,JSEA) = VA(ISP,JSEA) / CG1(IK) * CLATS(ISEA)
-#else
         VA(ISP,JSEA) = VA(ISP,JSEA) / CG1(IK) * CLATS(ISEA)
         VAdouble(ISP,JSEA) = DBLE( VA(ISP,JSEA) )
-#endif
       END DO
     END DO
-
-#ifdef W3_ITDPPC
     CALL PDLIB_exchange2Ddouble(VAdouble)
-    VAOLD = VAdouble(1:NSPEC,1:NSEAL)
-#else
+
     VAOLD = VA(1:NSPEC,1:NSEAL)
-#endif
     !
     !    init matrix and right hand side
-    !
-    call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION 2')
     !
     IF (.not. LSLOC) THEN
       ASPAR_JAC = ZERO
       B_JAC = ZERO
     ENDIF
-    call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION 3')
     !
     !     source terms
     !
-!CALCARRAY_JACOBI_SOURCE_1
-!calcARRAY_JACOBI_VEC
-!calcARRAY_JACOBI_SPECTRAL_1
-
     if (myrank==0)write(*,*)'FSSOURCE,IMEM, LSLOC ',FSSOURCE,IMEM, LSLOC
     IF (FSSOURCE) THEN
       IF (.not. LSLOC) THEN
@@ -8168,12 +8147,10 @@ CONTAINS
 #endif
       ENDIF
     END IF
-    call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION 4')
     !
     !     geographical advection
     !
     call calcARRAY_JACOBI_VEC(DTG,FACX,FACY,VGX,VGY)
-    call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION 5')
     !
     !     spectral advection
     !
@@ -8183,21 +8160,30 @@ CONTAINS
     END IF
 !KWS check next
     CALL APPLY_BOUNDARY_CONDITION(IMOD)
-    call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION 6')
     !
     nbIter=0
     do ip = 1, np
       Lconverged(ip) = .false.
     enddo
-#ifdef W3_ITDP
-#ifndef W3_ITDPPC
-    DO IP = 1, np
-      VAdouble(1:NSPEC,IP)=DBLE(VA(1:NSPEC,IP))
-    ENDDO
-    CALL PDLIB_exchange2Ddouble(VAdouble)
-#endif
+    !DO IP = 1, np
+    !  VAdouble(1:NSPEC,IP)=DBLE(VA(1:NSPEC,IP))
+    !ENDDO
+    !CALL PDLIB_exchange2Ddouble(VAdouble)
     call cpu_time(TTime0) !timing
-#endif
+!
+!
+!KWS Apply diagonal preconditioning only once!
+!
+      DO IP = 1, np
+        ASPAR_DIAG_INV(1:NSPEC,IP) = 1.D0 / ASPAR_JAC(1:NSPEC,PDLIB_I_DIAG(IP))
+        DO i = PDLIB_IA_P(IP)+1, PDLIB_IA_P(IP+1)
+          ASPAR_JAC(1:NSPEC,i)=ASPAR_JAC(1:NSPEC,i) * ASPAR_DIAG_INV(1:NSPEC,IP)
+        END DO
+        ASPAR_JAC(1:NSPEC,PDLIB_I_DIAG(IP))= 0.D0
+        B_JAC(1:NSPEC,IP)=B_JAC(1:NSPEC,IP) * ASPAR_DIAG_INV(1:NSPEC,IP)
+      ENDDO
+!
+! Main iteration loop
 !
       DO
 
@@ -8215,7 +8201,7 @@ CONTAINS
           CYCLE
         ENDIF
 
-	DO IK = 0, NK + 1
+	    DO IK = 0, NK + 1
 #ifdef NOCGTABLE
           CALL WAVNU_LOCAL(SIG(IK),DW(ISEA),WN1(IK),CG1(IK))
 #else
@@ -8223,21 +8209,16 @@ CONTAINS
           WN1(IK)  = WN(IK,ISEA)
 #endif
       	ENDDO
-
    	    JSEA  = JX_TO_JSEA(IP)
         ISEA  = MAPFS(1,IP_glob)
         eSI   = DBLE(PDLIB_SI(IP))
-#ifdef W3_ITDP
-	ACLOC = VAdouble(:,JSEA)
-#else
-     	ACLOC = VA(:,JSEA)
-#endif
+   	    ACLOC = VAdouble(:,JSEA)
 #ifndef W3_ITDPSU
         IF (.NOT. LCONVERGED(IP)) THEN
 #endif
           Sum_Prev = sum(ACLOC)
           eSum(1:NSPEC)	= B_JAC(1:NSPEC,IP)
-          ASPAR_DIAG(1:NSPEC) = ASPAR_JAC(1:NSPEC,PDLIB_I_DIAG(IP))
+!          ASPAR_DIAG(1:NSPEC) = ASPAR_JAC(1:NSPEC,PDLIB_I_DIAG(IP))
           DO i = PDLIB_IA_P(IP)+1, PDLIB_IA_P(IP+1)
             JP = PDLIB_JA(I)
             IF (JP .ne. IP) THEN
@@ -8251,8 +8232,8 @@ CONTAINS
             DO ISP=1,NSPEC
               ISPprevDir=ListISPprevDir(ISP)
               ISPnextDir=ListISPnextDir(ISP)
-              eA_THE = - DBLE( DTG )*eSI*MAX(ZERO,CAD(ISPprevDir))
-              eC_THE =   DBLE( DTG )*eSI*MIN(ZERO,CAD(ISPnextDir))
+              eA_THE = - DBLE( DTG )*eSI*MAX(ZERO,CAD(ISPprevDir)) * ASPAR_DIAG_INV(ISPprevDir,IP)
+              eC_THE =   DBLE( DTG )*eSI*MIN(ZERO,CAD(ISPnextDir)) * ASPAR_DIAG_INV(ISPnextDir,IP)
               eSum(ISP) = eSum(ISP) - eA_THE * VAdouble(ISPprevDir,IP)
               eSum(ISP) = eSum(ISP) - eC_THE * VAdouble(ISPnextDir,IP)
             END DO
@@ -8273,14 +8254,14 @@ CONTAINS
                   ISP       = ITH + (IK   -1)*NTH
                   ISPm1     = ITH + (IK-1 -1)*NTH
                   eFactM1   = DBLE( CG1(IK-1) ) / DBLE( CG1(IK) )
-                  eA_SIG    = - eSI * CP_SIG(ISPm1)/DMM(IK-1) * eFactM1
+                  eA_SIG    = - eSI * CP_SIG(ISPm1)/DMM(IK-1) * eFactM1 * ASPAR_DIAG_INV(ISPm1,IP)
                   eSum(ISP) = eSum(ISP) - eA_SIG*VAdouble(ISPm1,IP)
                 END DO
                 DO IK=1,NK-1
                   ISP       = ITH + (IK   -1)*NTH
                   ISPp1     = ITH + (IK+1 -1)*NTH
                   eFactP1   = DBLE( CG1(IK+1) ) / DBLE( CG1(IK) )
-                  eC_SIG    = eSI * CM_SIG(ISPp1)/DMM(IK) * eFactP1
+                  eC_SIG    = eSI * CM_SIG(ISPp1)/DMM(IK) * eFactP1 * ASPAR_DIAG_INV(ISPp1,IP)
                   eSum(ISP) = eSum(ISP) - eC_SIG*VAdouble(ISPp1,IP)
                 END DO
               END DO
@@ -8294,20 +8275,19 @@ CONTAINS
                   ISP       = ITH + (IK   -1)*NTH
                   ISPm1     = ITH + (IK-1 -1)*NTH
                   eFactM1   = DBLE( CG1(IK-1) ) / DBLE( CG1(IK) )
-                  eA_SIG    = - eSI * DWNI_M2(IK) * MAX(CWNB_M2(ISPm1),ZERO) *eFactM1
+                  eA_SIG    = - eSI * DWNI_M2(IK) * MAX(CWNB_M2(ISPm1),ZERO) *eFactM1  * ASPAR_DIAG_INV(ISPm1,IP)
                   eSum(ISP) = eSum(ISP) - eA_SIG*VAdouble(ISPm1,IP)
                 END DO
                 DO IK=1,NK-1
                   ISP       = ITH + (IK   -1)*NTH
                   ISPp1     = ITH + (IK+1 -1)*NTH
                   eFactP1   = DBLE( CG1(IK+1) ) / DBLE( CG1(IK) )
-                  eC_SIG    = eSI * DWNI_M2(IK) * MIN(CWNB_M2(ISP),ZERO) * eFactP1
+                  eC_SIG    = eSI * DWNI_M2(IK) * MIN(CWNB_M2(ISP),ZERO) * eFactP1  * ASPAR_DIAG_INV(ISPp1,IP)
                   eSum(ISP) = eSum(ISP) - eC_SIG*VAdouble(ISPp1,IP)
                 END DO
               END DO
             END IF ! FreqShiftMethod =1,2
           END IF !(FSFREQSHIFT .and. LSIG)
-          eSum(1:NSPEC)  = eSum(1:NSPEC) / ASPAR_DIAG(1:NSPEC)
 
 ! REMOVED Gauss Siedel option!!!
           U_JAC(1:NSPEC,IP) = eSum(1:NSPEC)
@@ -8371,9 +8351,7 @@ CONTAINS
             JSEA=JX_TO_JSEA(IP)
             eSI=DBLE( PDLIB_SI(IP) )
             eSum=B_JAC(:,IP)
-            ACLOC=VAdouble(:,IP)
             ISEA= MAPFS(1,IP_glob)
-            eSum(:) = eSum(:) - ASPAR_DIAG(:)*ACLOC
             DO I = PDLIB_IA_P(IP)+1, PDLIB_IA_P(IP+1)
               JP=PDLIB_JA(I)
               eSum(:) = eSum(:) - ASPAR_JAC(:,i)*VAdouble(:,JP)
@@ -8383,9 +8361,8 @@ CONTAINS
               DO ISP=1,NSPEC
                 ISPprevDir=ListISPprevDir(ISP)
                 ISPnextDir=ListISPnextDir(ISP)
-                eA_THE = - DBLE(DTG)*eSI*MAX(ZERO,CAD(ISPprevDir))
-                eC_THE =   DBLE(DTG)*eSI*MIN(ZERO,CAD(ISPnextDir))
-
+                eA_THE = - DBLE(DTG)*eSI*MAX(ZERO,CAD(ISPprevDir)) * ASPAR_DIAG_INV(ISPprevDir,IP)
+                eC_THE =   DBLE(DTG)*eSI*MIN(ZERO,CAD(ISPnextDir)) * ASPAR_DIAG_INV(ISPnextDir,IP)
                 eSum(ISP) = eSum(ISP) - eA_THE*VAdouble(ISPprevDir,IP)
                 eSum(ISP) = eSum(ISP) - eC_THE*VAdouble(ISPnextDir,IP)
               END DO
@@ -8408,14 +8385,14 @@ CONTAINS
                     ISP  =ITH + (IK  -1)*NTH
                     ISPm1=ITH + (IK-1-1)*NTH
                     eFactM1=DBLE( CG(IK-1,ISEA) ) /DBLE( CG1(IK) )
-                    eA_SIG= - eSI*CP_SIG(ISPm1)/DMM(IK-1) * eFactM1
+                    eA_SIG= - eSI*CP_SIG(ISPm1)/DMM(IK-1) * eFactM1 * ASPAR_DIAG_INV(ISPm1,IP)
                     eSum(ISP) = eSum(ISP) - eA_SIG*VAdouble(ISPm1,IP)
                   END DO
                   DO IK=1,NK-1
                     ISP  =ITH + (IK  -1)*NTH
                     ISPp1=ITH + (IK+1-1)*NTH
                     eFactP1= DBLE( CG(IK+1,ISEA) ) / DBLE( CG1(IK) )
-                    eC_SIG= eSI*CM_SIG(ISPp1)/DMM(IK) * eFactP1
+                    eC_SIG= eSI*CM_SIG(ISPp1)/DMM(IK) * eFactP1 * ASPAR_DIAG_INV(ISPp1,IP)
                     eSum(ISP) = eSum(ISP) - eC_SIG*VAdouble(ISPp1,IP)
                   END DO
                 END IF
@@ -8450,8 +8427,10 @@ CONTAINS
     DO IP = 1, npa
       DO ISP=1,NSPEC
         ITH    = 1 + MOD(ISP-1,NTH)
-        VA(ISP,IP)=MAX(ZERO, VA(ISP,IP))*IOBDP_LOC(IP)*DBLE(IOBPD_LOC(ITH,IP))
-        VAdouble(ISP,IP)=MAX(ZERO, VAdouble(ISP,IP))*IOBDP_LOC(IP)*DBLE(IOBPD_LOC(ITH,IP))
+        if ( (IOBDP_LOC(IP) .eq. 0).or (IOBPD_LOC(ITH,IP).eq.0) ) then
+          VA(ISP,IP) = 0.D0
+          VAdouble(ISP,IP) = 0.D0
+        endif
 #ifdef W3_REF1
         IF (REFPARS(3).LT.0.5.AND.IOBPD_LOC(ITH,IP).EQ.0.AND.IOBPA_LOC(IP).EQ.0) THEN
           VA(ISP,IP) = VAOLD(ISP,IP) ! restores reflected boundary values
@@ -8472,27 +8451,18 @@ CONTAINS
 #else
         CG1(IK)    = CG(IK,ISEA)
 #endif
-#ifdef W3_ITDPPC
-!        eVA = MAX ( ZERO ,DBLE(CG1(IK))/ DBLE(CLATS(ISEA)) * VAdouble(ISP,IP) )
-        eVA = MAX ( ZERO , VAdouble(ISP,IP) / PreCon(ISP,IP))
-        eVO = MAX ( ZERO ,  DBLE( VAOLD(ISP,IP) ) / PreCon(ISP,IP))
-#else
-        eVA = MAX ( ZERO ,DBLE( CG1(IK) ) / DBLE( CLATS(ISEA) ) * DBLE( VA(ISP,IP)) )
-        eVO = MAX ( ZERO ,DBLE( CG1(IK) ) / DBLE( CLATS(ISEA) ) * DBLE(VAOLD(ISP,JSEA)) )
-#endif
-        VAOLD(ISP,JSEA) =  eVO
-        VA(ISP,JSEA) = eVA
-#ifdef W3_ITDPPC
-        VAdouble(ISP,JSEA) = eVA
-#endif
+        VA(ISP,JSEA)       = VA(ISP,JSEA)       *  CG1(IK) /  CLATS(ISEA)      
+        VAOLD(ISP,JSEA)    = VAOLD(ISP,JSEA)    *  CG1(IK) /  CLATS(ISEA)   
+        VAdouble(ISP,JSEA) = VAdouble(ISP,JSEA) *  CG1(IK) /  CLATS(ISEA)
+        if (VA(ISP,JSEA) .lt.0.D0) VA(ISP,JSEA) = 0.D0
+        if (VAOLD(ISP,JSEA) .lt.0.D0) VAOLD(ISP,JSEA) = 0.D0
+        if (VAdouble(ISP,JSEA) .lt.0.D0) VAdouble(ISP,JSEA) = 0.D0
       END DO
     END DO ! JSEA
-#ifdef W3_ITDPPC
     !plugback in single precision VA
     DO IP = 1, npa
       VA(1:NSPEC,IP)=SNGL(VAdouble(1:NSPEC,IP))
     ENDDO
-#endif
     !
     call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION LOOP 7')
     !
