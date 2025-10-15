@@ -8077,6 +8077,10 @@ CONTAINS
     REAL*8  :: eVA, eVO, CG2, NEWDAC, NEWAC, OLDAC, MAXDAC
     REAL  :: CG1(0:NK+1), WN1(0:NK+1)
     LOGICAL :: LCONVERGED(NSEAL), lexist, LLWS(NSPEC)
+
+    integer :: expVA
+    real    :: trVA 
+
 #ifdef WEIGHTS
     INTEGER :: ipiter(nseal), ipitergl(np_global), ipiterout(np_global)
 #endif
@@ -8460,9 +8464,21 @@ CONTAINS
       END DO
     END DO ! JSEA
     !plugback in single precision VA
+#ifdef W3_TRNK
     DO IP = 1, npa
-      VA(1:NSPEC,IP)=SNGL(VAdouble(1:NSPEC,IP))
+      DO ISP=1,NSPEC
+        VA(ISP,IP)=SNGL(VAdouble(ISP,IP))
+        if (VA(ISP,IP) .gt. tiny(1.0) )then 
+          expVA=nint(log10(   VA(ISP,IP)  ) )
+!KWS        expVA=exponent(VA(ISP,IP)) !base 2, right?
+          if (expVA .ne. 0)then
+            trVA = 10.**(expVA-5) 
+            VA(ISP,IP) = AINT( VA(ISP,IP)  / trVA )  * trVA
+          endif
+        endif
+      ENDDO
     ENDDO
+#endif
     !
     call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION LOOP 7')
     !
