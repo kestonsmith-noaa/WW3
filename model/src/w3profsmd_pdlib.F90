@@ -8472,7 +8472,7 @@ CONTAINS
           expVA=nint(log10(   VA(ISP,IP)  ) )
 !KWS        expVA=exponent(VA(ISP,IP)) !base 2, right?
           if (expVA .ne. 0)then
-            trVA = 10.**(expVA-5) 
+            trVA = 10.**(expVA-7) 
             VA(ISP,IP) = AINT( VA(ISP,IP)  / trVA )  * trVA
           endif
         endif
