@@ -507,6 +507,8 @@ CONTAINS
     USE W3IOSFMD,  ONLY : W3IOSF, W3CPRT
 #ifdef W3_PDLIB
     USE PDLIB_W3PROFSMD, only : APPLY_BOUNDARY_CONDITION_VA
+    USE PDLIB_W3PROFSMD, only : APPLY_BOUNDARY_CONDITION_VAX !KWS addition
+    USE PDLIB_W3PROFSMD, ONLY : SET_BOUNDARY_CONDITION_VA
     USE PDLIB_W3PROFSMD, only : PDLIB_W3XYPUG, PDLIB_W3XYPUG_BLOCK_IMPLICIT, PDLIB_W3XYPUG_BLOCK_EXPLICIT
     USE PDLIB_W3PROFSMD, only : ALL_VA_INTEGRAL_PRINT, ALL_VAOLD_INTEGRAL_PRINT, ALL_FIELD_INTEGRAL_PRINT
     USE yowNodepool, only: np
@@ -676,6 +678,7 @@ CONTAINS
     REAL, ALLOCATABLE       :: BACSPEC(:)
     REAL                    :: BACANGL
 #endif
+    LOGICAL                 :: ApplyBC
     integer :: memunit
     !/ ------------------------------------------------------------------- /
     ! 0.  Initializations
@@ -1112,8 +1115,86 @@ CONTAINS
       !
       DTRES  = 0.
 
+#ifdef W3_PDLIB
+       ApplyBC= TBPIN(1) .EQ. -1
+
+!      IF ( TBPIN(1) .EQ. -1 ) CALL SET_BOUNDARY_CONDITION_VA !KWS set PPBI0 and PPBIN based on ICS
+!KWS Force BC APP for hot starts -------------------------------------
+         IF ( FLBPI .AND. LOCAL ) THEN
+           !
+write(*,*)'KWS w3wave (a) time:',TIME,TBPIN(1)
+           TBPIN(1)=-1
+           DO
+             IF ( TBPIN(1) .EQ. -1 ) THEN
+               READBC = .TRUE.
+               IDACT(1:1) = 'F'
+             ELSE
+!        DTG    = REAL(NINT(DTGA+DTRES+0.0001))
+!        DTRES  = DTRES + DTGA - DTG
+
+               READBC = DSEC21(TIME,TBPIN).LT.0.
+!               READBC = DSEC21(TIME,TBPIN).LT. ( DTRES + DTGA - DTG)
+!               READBC = DSEC21(TIME,TBPIN).LE.0.
+               IF (READBC.AND.IDACT(1:1).EQ.' ') IDACT(1:1) = 'X'
+             END IF
+             FLACT  = READBC .OR. FLACT
+             IF ( READBC ) THEN
+               CALL W3IOBC ( 'READ', NDS(9), TBPI0, TBPIN, ITEST, IMOD )
+               IF ( ITEST .NE. 1 ) CALL W3UBPT
+             ELSE
+               ITEST  = 0
+             END IF
+             IF ( ITEST .LT. 0 ) IDACT(1:1) = 'L'
+             IF ( ITEST .GT. 0 ) IDACT(1:1) = ' '
+             IF ( .NOT. (READBC.AND.FLBPI) ) EXIT
+           END DO
+         END IF !KWS
+        if (ApplyBc) then
+!         CALL APPLY_BOUNDARY_CONDITION_VA
+         TBPIN(1)=-1
+        endif
+#endif
+!KWS Force BC APP for hot starts -------------------------------------
       !
       DO IT = IT0, NT
+
+
+#ifdef W3_PDLIBXXX
+       ApplyBC= TBPIN(1) .EQ. -1
+
+!KWS Force BC APP for hot starts -------------------------------------
+         IF ( FLBPI .AND. LOCAL ) THEN
+           !
+write(*,*)'KWS w3wave (a) time:',TIME,TBPIN(1)
+           TBPIN(1)=-1
+           DO
+             IF ( TBPIN(1) .EQ. -1 ) THEN
+               READBC = .TRUE.
+               IDACT(1:1) = 'F'
+             ELSE
+               READBC = DSEC21(TIME,TBPIN).LT.0.
+               IF (READBC.AND.IDACT(1:1).EQ.' ') IDACT(1:1) = 'X'
+             END IF
+             FLACT  = READBC .OR. FLACT
+             IF ( READBC ) THEN
+               CALL W3IOBC ( 'READ', NDS(9), TBPI0, TBPIN, ITEST, IMOD )
+               IF ( ITEST .NE. 1 ) CALL W3UBPT
+             ELSE
+               ITEST  = 0
+             END IF
+             IF ( ITEST .LT. 0 ) IDACT(1:1) = 'L'
+             IF ( ITEST .GT. 0 ) IDACT(1:1) = ' '
+             IF ( .NOT. (READBC.AND.FLBPI) ) EXIT
+           END DO
+         END IF !KWS
+        if (ApplyBc) then
+!         CALL APPLY_BOUNDARY_CONDITION_VA
+         TBPIN(1)=-1
+        endif
+#endif
+
+
+
 #ifdef W3_TIMINGS
         CALL PRINT_MY_TIME("Begin of IT loop")
 #endif
@@ -1122,6 +1203,7 @@ CONTAINS
 #endif
         ! copy old values
 #ifdef W3_PDLIB
+        CALL APPLY_BOUNDARY_CONDITION_VA
         DO IP=1,NSEAL
           DO ISPEC=1,NSPEC
             VAOLD(ISPEC,IP)=VA(ISPEC,IP)
@@ -1295,6 +1377,7 @@ CONTAINS
               IDACT(1:1) = 'F'
             ELSE
               READBC = DSEC21(TIME,TBPIN).LT.0.
+!              READBC = DSEC21(TIME,TBPIN).LE.0.
               IF (READBC.AND.IDACT(1:1).EQ.' ') IDACT(1:1) = 'X'
             END IF
             FLACT  = READBC .OR. FLACT

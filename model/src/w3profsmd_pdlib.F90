@@ -5136,9 +5136,11 @@ CONTAINS
             DO ITH=1,NTH
               DO IK=1,NK
                 ISP=ITH + (IK-1)*NTH
-                eAC = ( RD1*BBPI0(ISP,IBI) + RD2*BBPIN(ISP,IBI) )   &
-                     / CG(IK,ISBPI(IBI)) * CLATS(ISBPI(IBI))
-                eVA = MAX(0., CG(IK,ISEA)/CLATS(ISEA)*eAC)
+!                eAC = ( RD1*BBPI0(ISP,IBI) + RD2*BBPIN(ISP,IBI) )   &
+!                     / CG(IK,ISBPI(IBI)) * CLATS(ISBPI(IBI))
+!                eVA = MAX(0., CG(IK,ISEA)/CLATS(ISEA)*eAC)
+                eAC =  RD1*BBPI0(ISP,IBI) + RD2*BBPIN(ISP,IBI)
+                eVA = MAX(0., eAC)
                 VA(ISP,JSEA) = eVA
               END DO
             END DO
@@ -5147,6 +5149,50 @@ CONTAINS
       END IF
     END IF
   END SUBROUTINE APPLY_BOUNDARY_CONDITION_VA
+
+  SUBROUTINE SET_BOUNDARY_CONDITION_VA
+#ifdef W3_S
+    USE W3SERVMD, only: STRACE
+#endif
+    USE W3GDATMD, only: CLATS, GTYPE, UNGTYPE
+    USE W3WDATMD, only: TIME
+    USE W3TIMEMD, only: DSEC21
+    USE W3ADATMD, only: CG
+    USE W3WDATMD, only: VA
+    USE W3GDATMD, only: NK, NTH
+    USE W3ODATMD, only: TBPI0, TBPIN, FLBPI, IAPROC, NAPROC, BBPI0, BBPIN, ISBPI, NBI
+    USE W3PARALL, only : ISEA_TO_JSEA
+#ifdef W3_S
+    INTEGER, SAVE           :: IENT = 0
+#endif
+    REAL    :: RD1, RD2, RD10, RD20
+    REAL    :: eVA, eAC
+    INTEGER :: IK, ITH, ISEA, JSEA
+    INTEGER :: IBI, ISP
+#ifdef W3_S
+    CALL STRACE (IENT, 'APPLY_BOUNDARY_CONDITION_VA')
+#endif
+    write(*,*)'KWS SET_BOUNDARY_CONDITION_VA', FLBPI,NBI,NTH , NK
+    IF (GTYPE .eq. UNGTYPE) THEN
+      IF (FLBPI .and. (IAPROC .le. NAPROC)) THEN
+        DO IBI=1, NBI
+          ISEA=ISBPI(IBI)
+          JSEA=ISEA_TO_JSEA(ISEA)
+          IF (JSEA .gt. 0) THEN
+            DO ITH=1,NTH
+              DO IK=1,NK
+                ISP=ITH + (IK-1)*NTH
+                BBPI0(ISP,IBI)=max(0.,VA(ISP,JSEA))
+                BBPIN(ISP,IBI)=max(0.,VA(ISP,JSEA))
+              END DO
+            END DO
+          END IF
+        END DO
+      END IF
+    END IF
+  END SUBROUTINE SET_BOUNDARY_CONDITION_VA
+
+
   !/ ------------------------------------------------------------------- /
   SUBROUTINE APPLY_BOUNDARY_CONDITION(IMOD)
     !/
@@ -6233,6 +6279,14 @@ CONTAINS
     FLUSH(740+IAPROC)
 #endif
 
+!vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+!KWS REMOVE BOUNDARY VALUE DRIFT for restartr B4B
+!    CALL APPLY_BOUNDARY_CONDITION(IMOD) !KWS Set Boundary Values to exact spec
+!    CALL PDLIB_exchange2DREAL_zero(VA)
+!^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
     DO JSEA=1, NSEAL
 
       IP      = JSEA
@@ -6384,6 +6438,11 @@ CONTAINS
     ENDDO
 #endif
 
+!vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+!KWS REMOVE BOUNDARY VALUE DRIFT for restartr B4B
+    CALL APPLY_BOUNDARY_CONDITION_VA
+!    CALL PDLIB_exchange2DREAL_zero(VA)
+!^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     !
     call print_memcheck(memunit, 'memcheck_____:'//' WW3_PROP SECTION LOOP 7')
