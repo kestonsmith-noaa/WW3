@@ -621,6 +621,7 @@ CONTAINS
 #if defined(W3_OMPG) || defined(W3_SMC)
     REAL                    :: UDARC
 #endif
+
     !/
     !/ ------------------------------------------------------------------- /
     !/
@@ -2191,7 +2192,8 @@ CONTAINS
     REAL(KIND=8)     :: d1,h,TIDE_HOUR,HH,pp,s,p,enp,dh,dpp,ds,dp,dnp,tau
     REAL             :: FX(44),UX(44),VX(44)
 #endif
-    !/
+    REAL             :: DEPTHtmp,WNtmp,CGtmp
+!/
     !/ ------------------------------------------------------------------- /
     !/
 #ifdef W3_S
@@ -2322,7 +2324,14 @@ CONTAINS
       !
       ! 2.a Check if deep water
       !
-      KDCHCK = WN(1,ISEA) * MIN( DWO(ISEA) , DW(ISEA) )
+      !
+      ! In shallow water, KDCHCK < KDMAX, assign time varying WN and 
+      ! CG as water level changes.  In deep water, KDCHCK >= KDMAX,
+      ! assign time constant WN and CG based on bathymetric depth(-ZB)
+      ! No wetting and drying considered in deep water as well.
+      DEPTHtmp=MAX(DMIN,-ZB(IS))
+      CALL WAVNU3(SIG(1),DEPTHtmp,WNtmp,CGtmp)
+      KDCHCK = WNtmp * DEPTHtmp
       IF ( KDCHCK .LT. KDMAX ) THEN
         !
         ! 2.b Update grid and save old grid

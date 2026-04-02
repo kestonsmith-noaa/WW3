@@ -514,6 +514,9 @@ CONTAINS
 #ifdef W3_DIST
     CHARACTER(LEN=12)       :: FORMAT
 #endif
+    REAL                    :: DEPTHtmp,WNtmp,CGtmp,KDCHCK
+    REAL                    :: KDMAX = 4.
+
     CHARACTER(LEN=23)       :: DTME21
     CHARACTER(LEN=30)       :: LFILE, TFILE
     integer                 :: memunit
@@ -1399,7 +1402,13 @@ CONTAINS
       WRITE (NDST,9051) IS, DEPTH
 #endif
       !
-      DO IK=0, NK+1
+      ! In shallow water, KDCHCK < KDMAX, assign time varying WN and CG as water level changes.
+      ! In deep water, KDCHCK >= KDMAX, assign time constant WN and CG based on bathymetric depth (-ZB).
+      DEPTHtmp=MAX(DMIN,-ZB(IS))
+      CALL WAVNU3(SIG(1),DEPTHtmp,WNtmp,CGtmp)
+      KDCHCK = WNtmp * DEPTHtmp
+      IF ( KDCHCK .GE. KDMAX ) DEPTH=DEPTHtmp
+      DO IK=0, NK+1 
         !
         !         Calculate wavenumbers and group velocities.
 #ifdef W3_PDLIB
