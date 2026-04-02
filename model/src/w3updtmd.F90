@@ -2329,8 +2329,12 @@ CONTAINS
       ! CG as water level changes.  In deep water, KDCHCK >= KDMAX,
       ! assign time constant WN and CG based on bathymetric depth(-ZB)
       ! No wetting and drying considered in deep water as well.
-      DEPTHtmp=MAX(DMIN,-ZB(IS))
+      DEPTHtmp=MAX(DMIN,-ZB(ISEA))
+#ifdef W3_PDLIB
       CALL WAVNU3(SIG(1),DEPTHtmp,WNtmp,CGtmp)
+#else
+      CALL WAVNU1(SIG(1),DEPTHtmp,WNtmp,CGtmp)
+#endif
       KDCHCK = WNtmp * DEPTHtmp
       IF ( KDCHCK .LT. KDMAX ) THEN
         !
@@ -2344,9 +2348,9 @@ CONTAINS
           !
           !   Calculate wavenumbers and group velocities.
 #ifdef W3_PDLIB
-              CALL WAVNU3(SIG(IK),DEPTH,WN(IK,ISEA),CG(IK,ISEA))
+          CALL WAVNU3(SIG(IK),DEPTH,WN(IK,ISEA),CG(IK,ISEA))
 #else
-              CALL WAVNU1(SIG(IK),DEPTH,WN(IK,ISEA),CG(IK,ISEA))
+          CALL WAVNU1(SIG(IK),DEPTH,WN(IK,ISEA),CG(IK,ISEA))
 #endif
         END DO
         !

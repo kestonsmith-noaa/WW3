@@ -1405,7 +1405,11 @@ CONTAINS
       ! In shallow water, KDCHCK < KDMAX, assign time varying WN and CG as water level changes.
       ! In deep water, KDCHCK >= KDMAX, assign time constant WN and CG based on bathymetric depth (-ZB).
       DEPTHtmp=MAX(DMIN,-ZB(IS))
+#ifdef W3_PDLIB
       CALL WAVNU3(SIG(1),DEPTHtmp,WNtmp,CGtmp)
+#else
+      CALL WAVNU1(SIG(1),DEPTHtmp,WNtmp,CGtmp)
+#endif
       KDCHCK = WNtmp * DEPTHtmp
       IF ( KDCHCK .GE. KDMAX ) DEPTH=DEPTHtmp
       DO IK=0, NK+1 
