@@ -126,6 +126,7 @@ MODULE W3INITMD
 
   PUBLIC
   !/
+  LOGICAL, ALLOCATABLE           :: KDFLAG(:) 
   REAL, PARAMETER                :: CRITOS = 15.
   CHARACTER(LEN=10), PARAMETER   :: WWVER  = '7.14  '
   CHARACTER(LEN=512), PARAMETER  :: SWITCHES  = &
@@ -514,7 +515,7 @@ CONTAINS
 #ifdef W3_DIST
     CHARACTER(LEN=12)       :: FORMAT
 #endif
-    REAL                    :: DEPTHtmp,WNtmp,CGtmp,KDCHCK
+    REAL                    :: DEPTHbat,WNbat,CGbat,KDCHCK
     REAL                    :: KDMAX = 4.
 
     CHARACTER(LEN=23)       :: DTME21
@@ -1391,6 +1392,7 @@ CONTAINS
     !
     ! 5.b Fill wavenumber and group velocity arrays.
     !
+    ALLOCATE ( KDFLAG(0:NSEA) )
     DO IS=0, NSEA
       IF (IS.GT.0) THEN
         DEPTH  = MAX ( DMIN , DW(IS) )
@@ -1404,14 +1406,21 @@ CONTAINS
       !
       ! In shallow water, KDCHCK < KDMAX, assign time varying WN and CG as water level changes.
       ! In deep water, KDCHCK >= KDMAX, assign time constant WN and CG based on bathymetric depth (-ZB).
-      DEPTHtmp=MAX(DMIN,-ZB(IS))
+      !
+      ! Calculate the wavenumber for lowest frequency based on bathymetric depth
+      DEPTHbat=MAX(DMIN,-ZB(IS))
 #ifdef W3_PDLIB
-      CALL WAVNU3(SIG(1),DEPTHtmp,WNtmp,CGtmp)
+      CALL WAVNU3(SIG(1),DEPTHbat,WNbat,CGbat)
 #else
-      CALL WAVNU1(SIG(1),DEPTHtmp,WNtmp,CGtmp)
+      CALL WAVNU1(SIG(1),DEPTHbat,WNbat,CGbat)
 #endif
-      KDCHCK = WNtmp * DEPTHtmp
-      IF ( KDCHCK .GE. KDMAX ) DEPTH=DEPTHtmp
+      KDFLAG(IS)=.TRUE.
+      KDCHCK = WNbat * DEPTHbat
+      IF ( KDCHCK .GE. KDMAX ) THEN
+        ! Use time constant CG and WN based on bathymtry for this point rather than time varying total depth.
+        DEPTH=DEPTHbat
+        KDFLAG(IS)=.FALSE.
+      ENDIF
       DO IK=0, NK+1 
         !
         !         Calculate wavenumbers and group velocities.

@@ -2157,6 +2157,7 @@ CONTAINS
 #if defined(W3_T) || defined(W3_TIDE)
     USE W3WDATMD, ONLY: TIME
 #endif
+    USE W3INITMD, ONLY: KDFLAG
     !/
     IMPLICIT NONE
     !/
@@ -2192,7 +2193,6 @@ CONTAINS
     REAL(KIND=8)     :: d1,h,TIDE_HOUR,HH,pp,s,p,enp,dh,dpp,ds,dp,dnp,tau
     REAL             :: FX(44),UX(44),VX(44)
 #endif
-    REAL             :: DEPTHtmp,WNtmp,CGtmp
 !/
     !/ ------------------------------------------------------------------- /
     !/
@@ -2324,19 +2324,12 @@ CONTAINS
       !
       ! 2.a Check if deep water
       !
-      !
       ! In shallow water, KDCHCK < KDMAX, assign time varying WN and 
-      ! CG as water level changes.  In deep water, KDCHCK >= KDMAX,
-      ! assign time constant WN and CG based on bathymetric depth(-ZB)
-      ! No wetting and drying considered in deep water as well.
-      DEPTHtmp=MAX(DMIN,-ZB(ISEA))
-#ifdef W3_PDLIB
-      CALL WAVNU3(SIG(1),DEPTHtmp,WNtmp,CGtmp)
-#else
-      CALL WAVNU1(SIG(1),DEPTHtmp,WNtmp,CGtmp)
-#endif
-      KDCHCK = WNtmp * DEPTHtmp
-      IF ( KDCHCK .LT. KDMAX ) THEN
+      ! CG as water level changes [KDFLAG=TRUE].  In deep water, 
+      ! KDCHCK >= KDMAX, assign time constant WN and CG based on bathymetric
+      ! depth [KDFLAG=FALSE]. KDCHK and KDFLAG are computed in w3initmd.
+      !
+      IF ( KDFLAG(ISEA) ) THEN
         !
         ! 2.b Update grid and save old grid
         !
