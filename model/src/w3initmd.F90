@@ -1392,7 +1392,9 @@ CONTAINS
     !
     ! 5.b Fill wavenumber and group velocity arrays.
     !
+#ifdef W3_PDLIB
     ALLOCATE ( KDFLAG(0:NSEA) )
+#endif
     DO IS=0, NSEA
       IF (IS.GT.0) THEN
         DEPTH  = MAX ( DMIN , DW(IS) )
@@ -1411,9 +1413,6 @@ CONTAINS
       DEPTHbat=MAX(DMIN,-ZB(IS))
 #ifdef W3_PDLIB
       CALL WAVNU3(SIG(1),DEPTHbat,WNbat,CGbat)
-#else
-      CALL WAVNU1(SIG(1),DEPTHbat,WNbat,CGbat)
-#endif
       KDFLAG(IS)=.TRUE.
       KDCHCK = WNbat * DEPTHbat
       IF ( KDCHCK .GE. KDMAX ) THEN
@@ -1421,6 +1420,7 @@ CONTAINS
         DEPTH=DEPTHbat
         KDFLAG(IS)=.FALSE.
       ENDIF
+#endif
       DO IK=0, NK+1 
         !
         !         Calculate wavenumbers and group velocities.

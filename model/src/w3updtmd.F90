@@ -2351,7 +2351,12 @@ CONTAINS
       ! KDCHCK >= KDMAX, assign time constant WN and CG based on bathymetric
       ! depth [KDFLAG=FALSE]. KDCHK and KDFLAG are computed in w3initmd.
       !
+#ifdef W3_PDLIB
       IF ( KDFLAG(ISEA) ) THEN
+#else
+      KDCHCK = WN(1,ISEA) * MIN( DWO(ISEA) , DW(ISEA) )
+      IF ( KDCHCK .LT. KDMAX ) THEN
+#endif        
         !
         ! 2.b Update grid and save old grid
         !
