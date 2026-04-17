@@ -1448,7 +1448,7 @@ CONTAINS
       DO IBI=1, NBI
         ISEA   = ISBPI(IBI)
         DO ISP=1, NSPEC
-#ifdef W3_PDLIB       
+#ifdef W3_PDLIB
           BBPI0(ISP,IBI) = ( RDBPI(IBI,1) * ABPI0(ISP,IPBPI(IBI,1))   &
                + RDBPI(IBI,2) * ABPI0(ISP,IPBPI(IBI,2))   &
                + RDBPI(IBI,3) * ABPI0(ISP,IPBPI(IBI,3))   &
@@ -1460,7 +1460,6 @@ CONTAINS
                + RDBPI(IBI,3) * ABPI0(ISP,IPBPI(IBI,3))   &
                + RDBPI(IBI,4) * ABPI0(ISP,IPBPI(IBI,4)) )
 #endif
-
         END DO
       END DO
       !
@@ -1475,7 +1474,7 @@ CONTAINS
     DO IBI=1, NBI
       ISEA   = ISBPI(IBI)
       DO ISP=1, NSPEC
-#ifdef W3_PDLIB       
+#ifdef W3_PDLIB
         BBPIN(ISP,IBI) = ( RDBPI(IBI,1) * ABPIN(ISP,IPBPI(IBI,1))       &
              + RDBPI(IBI,2) * ABPIN(ISP,IPBPI(IBI,2))       &
              + RDBPI(IBI,3) * ABPIN(ISP,IPBPI(IBI,3))       &
@@ -1519,7 +1518,6 @@ CONTAINS
         HS2    = HS2 + BBPIN(ISP,IBI) * DDEN(MAPWN(ISP)) /       &
              CG(MAPWN(ISP),ISBPI(IBI))
 #endif
-
       END DO
       HS1    = 4. * SQRT ( HS1 )
       HS2    = 4. * SQRT ( HS2 )
